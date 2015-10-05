@@ -1,0 +1,87 @@
+theory Float_twosum
+imports
+  Complex_Main
+  "~~/src/HOL/Library/Code_Target_Numeral"
+  "$AFP/IEEE_Floating_Point/RoundError"
+  "$AFP/IEEE_Floating_Point/Code_Float"
+begin
+
+subsection \<open>just for debugging: floats to strings and printing\<close>
+
+instantiation float::term_of
+begin
+definition term_of::"float \<Rightarrow> term" where "term_of x = undefined"
+instance ..
+end
+
+definition string_of_float::"float \<Rightarrow> String.literal" where
+  "string_of_float x = STR ''''"
+
+code_printing constant "string_of_float :: float \<Rightarrow> String.literal" \<rightharpoonup>
+  (SML) "Real.toString"
+declare [[code drop: "string_of_float"]]
+
+definition print::"String.literal \<Rightarrow> unit" where
+  "print x = ()"
+
+code_printing constant "print :: String.literal \<Rightarrow> unit" \<rightharpoonup>
+  (SML) "TextIO.print"
+declare [[code drop: "string_of_float"]]
+
+lemma [code]: "term_of_class.term_of (x::float) \<equiv> Code.abort (string_of_float x) (\<lambda>_. undefined)"
+  by (rule term_of_anything)
+
+definition println::"String.literal \<Rightarrow> unit" where
+  "println x = (let _ = print x in print (STR ''\<newline>''))"
+
+subsection \<open>Implementation\<close>
+
+fun twosum::"float * float \<Rightarrow> float *float"
+  where "twosum (a, b) =
+    (let s = a + b in
+    let an = s - b in
+    let bn = s - an in
+    let da = a - an in
+    let db = b - bn in
+    let t = da + db in
+    (s, t))"
+
+subsection \<open>Test Values\<close>
+
+definition a :: "float"
+  where "a = float_of 33"
+
+definition b :: "float"
+  where "b = float_of 1 / float_of 1243313"
+
+definition r :: "float"
+  where "r = a+b"
+
+definition test_input :: "float*float"
+  where "test_input = (a, b)"
+
+definition test_result :: "float*float"
+  where "test_result = twosum test_input"
+
+definition s :: "float"
+  where "s = fst test_result"
+
+subsection \<open>Output\<close>
+
+definition hello_world::"unit \<Rightarrow> unit" where
+  "hello_world _ = (println (STR ''Starting 2sum example...''))"
+value [code] "hello_world ()"
+
+value [code]
+  "let _ = print (STR ''a = '') in let _ = println (string_of_float a)
+  in let _ = print (STR ''b = '') in let _ = println (string_of_float b)
+  in let _ = print (STR ''r = '') in let _ = print (string_of_float (a+b))
+  in let _ = println (STR '' (the float closest to a+b)'')
+  in let _ = print (STR ''s = '') in let _ = println (string_of_float s)
+  in let _ = print (STR ''t = '') in let _ = println (string_of_float (snd test_result))
+  in println (STR ''done'')"
+
+(*This equality test should be true:*)
+value [code] "r \<le> s \<and> r \<ge> s "
+
+end
