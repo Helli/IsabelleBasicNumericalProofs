@@ -57,23 +57,11 @@ fun twosum::"float * float \<Rightarrow> float *float"
 
 subsection \<open>Test Values\<close>
 
-definition a :: "float"
-  where "a = float_of 33"
-
-definition b :: "float"
-  where "b = float_of 1 / float_of 1243313"
-
-definition r :: "float"
-  where "r = a+b"
-
 definition test_input :: "float*float"
-  where "test_input = (a, b)"
+  where "test_input = (float_of 33, float_of 1 / float_of 1243313)"
 
 definition test_result :: "float*float"
   where "test_result = twosum test_input"
-
-definition s :: "float"
-  where "s = fst test_result"
 
 subsection \<open>Output\<close>
 
@@ -82,15 +70,13 @@ definition hello_world::"unit \<Rightarrow> unit" where
 value [code] "hello_world ()"
 
 value [code]
-  "let _ = print (STR ''a = '') in let _ = println (string_of_float a)
-  in let _ = print (STR ''b = '') in let _ = println (string_of_float b)
-  in let _ = print (STR ''r = '') in let _ = print (string_of_float (a+b))
-  in let _ = println (STR '' (the float closest to a+b)'')
-  in let _ = print (STR ''s = '') in let _ = println (string_of_float s)
-  in let _ = print (STR ''t = '') in let _ = println (string_of_float (snd test_result))
+  "let
+  _ = print (STR ''a = ''); _ = println (string_of_float (fst test_input));
+  _ = print (STR ''b = ''); _ = println (string_of_float (snd test_input));
+  _ = print (STR ''r = ''); _ = print (string_of_float (fst test_input + snd test_input));
+  _ = println (STR '' (the float closest to a+b)'');
+  _ = print (STR ''s = ''); _ = println (string_of_float (fst test_result));
+  _ = print (STR ''t = ''); _ = println (string_of_float (snd test_result))
   in println (STR ''done'')"
-
-(*This equality test should be true:*)
-value [code] "r \<le> s \<and> r \<ge> s "
 
 end
