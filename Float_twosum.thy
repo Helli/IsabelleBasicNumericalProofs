@@ -6,6 +6,13 @@ imports
   "$AFP/IEEE_Floating_Point/Code_Float"
 begin
 
+subsection \<open>ensure rounding: store variables\<close>
+
+definition "STORE x = x"
+code_printing constant "STORE :: 'a \<Rightarrow> 'a" \<rightharpoonup>
+  (SML) "(Unsynchronized.! (Unsynchronized.ref ((_))))"
+declare [[code drop: STORE]]
+
 subsection \<open>just for debugging: floats to strings and printing\<close>
 
 instantiation float::term_of
@@ -38,13 +45,15 @@ subsection \<open>Implementation\<close>
 
 fun twosum::"float * float \<Rightarrow> float *float"
   where "twosum (a, b) =
-    (let s = a + b in
-    let an = s - b in
-    let bn = s - an in
-    let da = a - an in
-    let db = b - bn in
-    let t = da + db in
-    (s, t))"
+    (let
+      s = STORE (a + b);
+      an = STORE (s - b);
+      bn = STORE (s - an);
+      da = STORE (a - an);
+      db = STORE (b - bn);
+      t = STORE (da + db)
+    in (s, t))"
+
 
 subsection \<open>Test Values\<close>
 
