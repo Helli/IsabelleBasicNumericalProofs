@@ -75,20 +75,27 @@ definition test_result :: "float*float"
 definition s :: "float"
   where "s = fst test_result"
 
+
 subsection \<open>Output\<close>
 
 definition hello_world::"unit \<Rightarrow> unit" where
   "hello_world _ = (println (STR ''Starting 2sum example...''))"
 value [code] "hello_world ()"
 
-value [code]
-  "let _ = print (STR ''a = '') in let _ = println (string_of_float a)
-  in let _ = print (STR ''b = '') in let _ = println (string_of_float b)
-  in let _ = print (STR ''r = '') in let _ = print (string_of_float (a+b))
-  in let _ = println (STR '' (the float closest to a+b)'')
-  in let _ = print (STR ''s = '') in let _ = println (string_of_float s)
-  in let _ = print (STR ''t = '') in let _ = println (string_of_float (snd test_result))
-  in println (STR ''done'')"
+primrec test where "test () =
+  (let
+    _ = print (STR ''a = ''); _ = println (string_of_float a);
+    _ = print (STR ''b = '') ; _ = println (string_of_float b);
+    _ = print (STR ''r = '') ; _ = print (string_of_float (a+b));
+    _ = println (STR '' (the float closest to a+b)'');
+    _ = print (STR ''s = '') ; _ = println (string_of_float s);
+    _ = print (STR ''t = '') ; _ = println (string_of_float (snd test_result))
+  in println (STR ''done''))"
+
+value [code] "test ()"
+
+export_code test in SML module_name Test
+export_code test in SML module_name Test file "test.sml"
 
 (*This equality test should be true:*)
 value [code] "r \<le> s \<and> r \<ge> s "

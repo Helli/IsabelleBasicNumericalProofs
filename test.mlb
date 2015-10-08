@@ -1,0 +1,7 @@
+(* import libraries *)
+$(SML_LIB)/basis/basis.mlb
+
+(* program files *)
+unsynchronized.sml
+test.sml
+test_main.sml
