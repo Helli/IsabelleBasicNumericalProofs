@@ -42,6 +42,5 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
-# Some Isabelle-specific (?) copies
-
-*.thy~
+# temporary files of jEdit
+*~
