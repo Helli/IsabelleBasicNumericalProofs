@@ -83,47 +83,33 @@ fun twosum::"float * float \<Rightarrow> float *float"
 
 subsection \<open>Test Values\<close>
 
-
 context begin
 
-private definition a :: "float"
-  where "a = float_of 33"
-
-private definition b :: "float"
-  where "b = float_of 1 / float_of 1243313"
-
-private definition r :: "float"
-  where "r = a+b"
-
 private definition test_input :: "float*float"
-  where "test_input = (a, b)"
+  where "test_input = (float_of 33, float_of 1 / float_of 1243313)"
 
 private definition test_result :: "float*float"
   where "test_result = twosum test_input"
 
-private definition s :: "float"
-  where "s = fst test_result"
-
 primrec test where "test () =
   (let
-    _ = print (STR ''a = ''); _ = println (string_of_float a);
-    _ = print (STR ''b = '') ; _ = println (string_of_float b);
-    _ = print (STR ''r = '') ; _ = print (string_of_float (a+b));
-    _ = println (STR '' (the float closest to a+b)'');
-    _ = print (STR ''s = '') ; _ = println (string_of_float s);
-    _ = print (STR ''t = '') ; _ = println (string_of_float (snd test_result))
+  _ = print (STR ''a = ''); _ = println (string_of_float (fst test_input));
+  _ = print (STR ''b = ''); _ = println (string_of_float (snd test_input));
+  _ = print (STR ''r = ''); _ = print (string_of_float (fst test_input + snd test_input));
+  _ = println (STR '' (the float closest to a+b)'');
+  _ = print (STR ''s = ''); _ = println (string_of_float (fst test_result));
+  _ = print (STR ''t = ''); _ = println (string_of_float (snd test_result))
   in println (STR ''done''))"
 
 primrec test2 where "test2 () = 
   (let
-    (s, t) = twosum (a, b);
+    (a, b) = test_input;
+    (s, t) = twosum test_input;
     (af, bf) = (toFloat a, toFloat b);
     (sf, tf) = (toFloat s, toFloat t)
   in (normfloat (af + bf), normfloat (sf + tf)))"
 
 value [code] "test2 ()"
-
-value [code] "r \<le> s \<and> r \<ge> s "
 
 end
 
