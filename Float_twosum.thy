@@ -108,8 +108,8 @@ definition println::"String.literal \<Rightarrow> unit" where
 
 subsection \<open>printing Float.floats\<close>
 
-definition print_sw_float::"Float.float \<Rightarrow> unit" where
-  "print_sw_float x = (let
+definition println_sw_float::"Float.float \<Rightarrow> unit" where
+  "println_sw_float x = (let
       _ = print (int_to_string (Float.mantissa x));
       _ = print (STR '' * 2 ^ '');
       _ = println (int_to_string (Float.exponent x))
