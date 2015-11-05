@@ -36,13 +36,13 @@ subsection \<open>Test results\<close>
 definition a_plus_b :: "Float.float list"
 where "a_plus_b = map (\<lambda>(x, y). x + y) input_sw_float"
 
-definition s_plus_t :: "Float.float list"
-where "s_plus_t = map (\<lambda>(x, y). x + y) output_sw_float"
+definition s_plus_e :: "Float.float list"
+where "s_plus_e = map (\<lambda>(x, y). x + y) output_sw_float"
 
 definition test_data :: "(Float.float * Float.float) list"
 where
   " 
-  test_data = zip a_plus_b s_plus_t
+  test_data = zip a_plus_b s_plus_e
   
     (* fake test result: (6, 4). Comment in for a negative result*)
     (* @[(Float.Float 3 1, Float.Float 4 0)]   *)
@@ -85,8 +85,8 @@ where "print_details n = (let
   _ = print (STR ''a+b = '');
   _ = println_sw_float (a_plus_b ! n);
   _ = print (STR ''s+t = '');
-  _ = println_sw_float (s_plus_t ! n);
-  _ = println (if a_plus_b ! n = s_plus_t ! n
+  _ = println_sw_float (s_plus_e ! n);
+  _ = println (if a_plus_b ! n = s_plus_e ! n
     then STR ''OK (a+b = s+t)''
     else STR ''FAILED (a+b != s+t)'')
   in ())"

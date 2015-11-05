@@ -119,6 +119,7 @@ definition println_sw_float::"Float.float \<Rightarrow> unit" where
 
 subsection \<open>Implementation\<close>
 
+(* s for sum, e for error *)
 fun twosum::"float * float \<Rightarrow> float *float"
   where "twosum (a, b) =
     (let
@@ -127,8 +128,8 @@ fun twosum::"float * float \<Rightarrow> float *float"
       bn = STORE (s - an);
       da = STORE (a - an);
       db = STORE (b - bn);
-      t =  STORE (da + db)
-    in (s, t))"
+      e =  STORE (da + db)
+    in (s, e))"
 
 
 subsection \<open>Test Values\<close>
