@@ -97,4 +97,39 @@ value [code] "print_details 8"
 value [code] "map print_details [0, 4, 5]"
 *)
 
+subsection \<open>Testing Twosum without STORE\<close>
+  
+(* twosum without STORE *)
+fun twosumNew::"float * float \<Rightarrow> float *float"
+  where "twosumNew (a, b) =
+    (let
+      s =  (a + b);
+      an = (s - b);
+      bn = (s - an);
+      da = (a - an);
+      db = (b - bn);
+      e =  (da + db)
+    in (s, e))"
+
+definition twosumNew_output :: "(float*float) list"
+where "twosumNew_output = map twosumNew twosum_input"
+
+definition tsNew_sum_tests :: "(float*float) list"
+where "tsNew_sum_tests = zip (map fst twosum_output) (map fst twosumNew_output)"
+
+definition tsNew_err_tests :: "(float*float) list"
+where "tsNew_err_tests = zip (map snd twosum_output) (map snd twosumNew_output)"
+
+definition tsNew_sum_results :: "bool list"
+where "tsNew_sum_results = map (\<lambda>(x, y). float_eq x y) tsNew_sum_tests"
+
+definition tsNew_err_results :: "bool list"
+where "tsNew_err_results = map (\<lambda>(x, y). float_eq x y) tsNew_err_tests"
+
+(* These should be true no matter what *)
+value [code] "tsNew_sum_results"
+
+(* These should be true if twosumNew\<equiv>twosum in your installation*)
+value [code] "tsNew_err_results"
+
 end
