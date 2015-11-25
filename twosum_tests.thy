@@ -1,12 +1,13 @@
-theory twosum_tests
+theory TwoSum_tests
 imports
-  Float_twosum
+  test_utils
+  TwoSum
 begin
 
 subsection \<open>Input data\<close>
 
-definition twosum_input :: "(float*float) list"
-where "twosum_input = [
+definition twoSum_input :: "(float*float) list"
+where "twoSum_input = [
   (float_of_int 0, float_of_int 0),
   (float_of_int 9 / float_of_int 10, float_of_int 8 / float_of_int 10),
   (float_of_int 353905643, float_of_int (-23423)),
@@ -19,16 +20,16 @@ where "twosum_input = [
   ]"
 
 definition input_sw_float :: "(Float.float*Float.float) list"
-where "input_sw_float = map (\<lambda>(x, y). (toFloat x, toFloat y)) twosum_input"
+where "input_sw_float = map (\<lambda>(x, y). (toFloat x, toFloat y)) twoSum_input"
 
 
 subsection \<open>Output data\<close>
 
-definition twosum_output :: "(float*float) list"
-where "twosum_output = map twosum twosum_input"
+definition twoSum_output :: "(float*float) list"
+where "twoSum_output = map twoSum twoSum_input"
 
 definition output_sw_float :: "(Float.float*Float.float) list"
-where "output_sw_float = map (\<lambda>(x, y). (toFloat x, toFloat y)) twosum_output"
+where "output_sw_float = map (\<lambda>(x, y). (toFloat x, toFloat y)) twoSum_output"
 
 
 subsection \<open>Test results\<close>
@@ -97,39 +98,99 @@ value [code] "print_details 8"
 value [code] "map print_details [0, 4, 5]"
 *)
 
-subsection \<open>Testing Twosum without STORE\<close>
-  
-(* twosum without STORE *)
-fun twosumNew::"float * float \<Rightarrow> float *float"
-  where "twosumNew (a, b) =
+subsection \<open>Testing Twosum with STORE\<close>
+
+(*ensure rounding: store variables*)
+definition "STORE x = x"
+code_printing constant "STORE :: 'a \<Rightarrow> 'a" \<rightharpoonup>
+  (SML) "(Unsynchronized.! (Unsynchronized.ref ((_))))"
+declare [[code drop: STORE]]
+
+(* twoSum with STORE *)
+fun twoSumSTORE :: "float * float \<Rightarrow> float *float"
+  where "twoSumSTORE (a, b) =
     (let
-      s =  (a + b);
-      an = (s - b);
-      bn = (s - an);
-      da = (a - an);
-      db = (b - bn);
-      e =  (da + db)
+      s =  STORE(a + b);
+      an = STORE(s - b);
+      bn = STORE(s - an);
+      da = STORE(a - an);
+      db = STORE(b - bn);
+      e =  STORE(da + db)
     in (s, e))"
 
-definition twosumNew_output :: "(float*float) list"
-where "twosumNew_output = map twosumNew twosum_input"
+definition twoSumSTORE_output :: "(float*float) list"
+where "twoSumSTORE_output = map twoSumSTORE twoSum_input"
 
-definition tsNew_sum_tests :: "(float*float) list"
-where "tsNew_sum_tests = zip (map fst twosum_output) (map fst twosumNew_output)"
+definition tsSTORE_sum_tests :: "(float*float) list"
+where "tsSTORE_sum_tests = zip (map fst twoSum_output) (map fst twoSumSTORE_output)"
 
-definition tsNew_err_tests :: "(float*float) list"
-where "tsNew_err_tests = zip (map snd twosum_output) (map snd twosumNew_output)"
+definition tsSTORE_err_tests :: "(float*float) list"
+where "tsSTORE_err_tests = zip (map snd twoSum_output) (map snd twoSumSTORE_output)"
 
-definition tsNew_sum_results :: "bool list"
-where "tsNew_sum_results = map (\<lambda>(x, y). float_eq x y) tsNew_sum_tests"
+definition tsSTORE_sum_results :: "bool list"
+where "tsSTORE_sum_results = map (\<lambda>(x, y). float_eq x y) tsSTORE_sum_tests"
 
-definition tsNew_err_results :: "bool list"
-where "tsNew_err_results = map (\<lambda>(x, y). float_eq x y) tsNew_err_tests"
+definition tsSTORE_err_results :: "bool list"
+where "tsSTORE_err_results = map (\<lambda>(x, y). float_eq x y) tsSTORE_err_tests"
 
 (* These should be true no matter what *)
-value [code] "tsNew_sum_results"
+value [code] "tsSTORE_sum_results"
 
-(* These should be true if twosumNew\<equiv>twosum in your installation*)
-value [code] "tsNew_err_results"
+(*
+  These should be true if twoSumSTORE\<equiv>twoSum in your installation
+  check README for details
+*)
+value [code] "tsSTORE_err_results"
+
+
+subsection \<open>Test for use with other ml-compilers\<close>
+
+context begin
+
+  private definition test_input :: "float*float"
+    where "test_input = (float_of 33, float_of 1 / float_of 1243313)"
+
+  private definition test_result :: "float*float"
+    where "test_result = twoSum test_input"
+
+  primrec test where "test () =
+    (let
+      _ = print (STR ''a = ''); _ = println (string_of_float (fst test_input));
+      _ = print (STR ''b = ''); _ = println (string_of_float (snd test_input));
+      _ = print (STR ''r = ''); _ = print (string_of_float (fst test_input + snd test_input));
+      _ = println (STR '' (the float closest to a+b)'');
+      _ = print (STR ''s = ''); _ = println (string_of_float (fst test_result));
+      _ = print (STR ''t = ''); _ = println (string_of_float (snd test_result))
+    in println (STR ''done''))"
+
+  primrec test2 where "test2 () = 
+    (let
+      (a, b) = test_input;
+      (s, t) = twoSum test_input;
+      (af, bf) = (toFloat a, toFloat b);
+      (sf, tf) = (toFloat s, toFloat t)
+    in (normfloat (af + bf), normfloat (sf + tf)))"
+
+  value [code] "test2 ()"
+
+end
+
+(* hide_const (open) a *)
+
+subsection \<open>Output\<close>
+
+(*
+definition hello_world::"unit \<Rightarrow> unit" where
+  "hello_world _ = (println (STR ''Starting 2sum example...''))"
+value [code] "hello_world ()"
+
+value [code] "test ()"
+*)
+
+export_code test in SML module_name Test
+(*
+export_code test in SML module_name Test file "test.sml"
+*)
+
 
 end

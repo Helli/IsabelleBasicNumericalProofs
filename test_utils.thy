@@ -1,11 +1,9 @@
-theory Float_twosum
+theory test_utils
 imports
-  Complex_Main
-  "~~/src/HOL/Library/Code_Target_Numeral"
   "~~/src/HOL/Library/Float"
-  "$AFP/IEEE_Floating_Point/RoundError"
   "$AFP/IEEE_Floating_Point/Code_Float"
 begin
+
 
 subsection \<open>Conversion from int\<close>
 
@@ -49,12 +47,6 @@ definition toFloat::"float \<Rightarrow> Float.float" where
 value [code] "((Float.Float 123 (-13)) + (Float.Float 13 (-13))) * ((Float.Float 123 (-13)))"
 value [code] "toFloat (float_of 1 / float_of 1243313)"
 
-subsection \<open>ensure rounding: store variables\<close>
-
-definition "STORE x = x"
-code_printing constant "STORE :: 'a \<Rightarrow> 'a" \<rightharpoonup>
-  (SML) "(Unsynchronized.! (Unsynchronized.ref ((_))))"
-declare [[code drop: STORE]]
 
 subsection \<open>just for debugging: floats to strings and printing\<close>
 
@@ -106,6 +98,7 @@ lemma [code]: "term_of_class.term_of (x::float) \<equiv> Code.abort (string_of_f
 definition println::"String.literal \<Rightarrow> unit" where
   "println x = (let _ = print x in print (STR ''\<newline>''))"
 
+
 subsection \<open>printing Float.floats\<close>
 
 definition println_sw_float::"Float.float \<Rightarrow> unit" where
@@ -115,66 +108,5 @@ definition println_sw_float::"Float.float \<Rightarrow> unit" where
       _ = println (int_to_string (Float.exponent x))
      in
        ())"
-
-
-subsection \<open>Implementation\<close>
-
-(* s for sum, e for error *)
-fun twosum::"float * float \<Rightarrow> float *float"
-  where "twosum (a, b) =
-    (let
-      s =  STORE (a + b);
-      an = STORE (s - b);
-      bn = STORE (s - an);
-      da = STORE (a - an);
-      db = STORE (b - bn);
-      e =  STORE (da + db)
-    in (s, e))"
-
-
-subsection \<open>Test Values\<close>
-
-context begin
-
-private definition test_input :: "float*float"
-  where "test_input = (float_of 33, float_of 1 / float_of 1243313)"
-
-private definition test_result :: "float*float"
-  where "test_result = twosum test_input"
-
-primrec test where "test () =
-  (let
-  _ = print (STR ''a = ''); _ = println (string_of_float (fst test_input));
-  _ = print (STR ''b = ''); _ = println (string_of_float (snd test_input));
-  _ = print (STR ''r = ''); _ = print (string_of_float (fst test_input + snd test_input));
-  _ = println (STR '' (the float closest to a+b)'');
-  _ = print (STR ''s = ''); _ = println (string_of_float (fst test_result));
-  _ = print (STR ''t = ''); _ = println (string_of_float (snd test_result))
-  in println (STR ''done''))"
-
-primrec test2 where "test2 () = 
-  (let
-    (a, b) = test_input;
-    (s, t) = twosum test_input;
-    (af, bf) = (toFloat a, toFloat b);
-    (sf, tf) = (toFloat s, toFloat t)
-  in (normfloat (af + bf), normfloat (sf + tf)))"
-
-value [code] "test2 ()"
-
-end
-
-(* hide_const (open) a *)
-
-subsection \<open>Output\<close>
-
-definition hello_world::"unit \<Rightarrow> unit" where
-  "hello_world _ = (println (STR ''Starting 2sum example...''))"
-value [code] "hello_world ()"
-
-value [code] "test ()"
-
-export_code test in SML module_name Test
-export_code test in SML module_name Test file "test.sml"
 
 end
