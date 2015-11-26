@@ -16,7 +16,9 @@ where "twoSum_input = [
   (float_of_int 1 / float_of_int 353, float_of_int 2676543423),
   (float_of_int 353, float_of_int 1 /  float_of_int 29893423),
   (float_of_int 353, float_of_int 1 /  float_of_int (-29893423)),
-  (float_of_int (-45), float_of_int (-34529693554493592))
+  (float_of_int (-45), float_of_int (-34529693554493592)),
+  (* this one should detect the double rounding problem *)
+  (float_of_int 9223372036854775808, float_of_int 4097 / float_of_int 4)
   ]"
 
 definition input_sw_float :: "(Float.float*Float.float) list"
