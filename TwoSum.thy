@@ -13,15 +13,17 @@ code_printing constant "fma_float :: float \<Rightarrow> float \<Rightarrow> flo
 declare fma_float_def [code del]
 
 code_printing
-code_module "FromManExp" \<rightharpoonup> (SML)
-  \<open>fun frommanexp m e = Real.fromManExp {exp = e, man = m}\<close>
+  code_module "ULP_Float" \<rightharpoonup> (SML)
+  \<open>fun ulp_float x =
+  let
+    val (m, e) = tomanexp x
+  in
+    Real.fromManExp {man = 1.0, exp = e}
+  end\<close>
 
-definition frommanexp::"float \<Rightarrow> integer \<Rightarrow> float" where "frommanexp x y = undefined"
-code_printing constant "frommanexp :: float \<Rightarrow> integer \<Rightarrow> float" \<rightharpoonup>
-  (SML) "frommanexp"
-declare frommanexp_def[code del]
-
-definition "Ulp_float x = frommanexp One (integer_of_int (Float.exponent (toFloat x) - 1))"
+definition ulp_float::"float \<Rightarrow> float" where "ulp_float x = undefined"
+code_printing constant "ulp_float :: float \<Rightarrow> float" \<rightharpoonup> (SML) "ulp'_float"
+declare ulp_float_def[code del]
 
 
 subsection \<open>Needed Float Properties\<close>
