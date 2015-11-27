@@ -11,7 +11,7 @@ fun itVecSum :: "float list \<Rightarrow> float list \<Rightarrow> float list" w
     in itVecSum (s # as) (e # hs))"
 
 lemma itVecSum_correct1:
-  (* listsum is not available due to missing monoid properties of fadd *)
+  --\<open>listsum is not available due to missing monoid properties of fadd\<close>
   shows "hd (itVecSum (a # as) bs) = fold op+ as a"
   apply (induction as arbitrary: a bs)
   apply (simp_all add: twoSum_correct1 split_def del: twoSum.simps)
