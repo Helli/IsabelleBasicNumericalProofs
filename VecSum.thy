@@ -4,8 +4,8 @@ imports
 begin
 
 fun itVecSum :: "float list \<Rightarrow> float list \<Rightarrow> float list" where
-  "itVecSum [] hs = hs" |
-  "itVecSum [a] hs = a # hs" |
+  "itVecSum [] hs = rev hs" |
+  "itVecSum [a] hs = a # rev hs" |
   "itVecSum (a1 # a2 # as) hs = (let
     (s, e) = twoSum (a2, a1)
     in itVecSum (s # as) (e # hs))"

@@ -1,7 +1,27 @@
 theory TwoSum
 imports
+  test_utils
   "$AFP/IEEE_Floating_Point/FloatProperty"
 begin
+
+subsection \<open>Further operations\<close>
+
+definition "fma_float a b c = Float (Val a * Val b + Val c)"
+
+code_printing constant "fma_float :: float \<Rightarrow> float \<Rightarrow> float \<Rightarrow> float" \<rightharpoonup>
+  (SML) "Real.*+ ((_), (_), (_))"
+declare fma_float_def [code del]
+
+code_printing
+code_module "FromManExp" \<rightharpoonup> (SML)
+  \<open>fun frommanexp m e = Real.fromManExp {exp = e, man = m}\<close>
+
+definition frommanexp::"float \<Rightarrow> integer \<Rightarrow> float" where "frommanexp x y = undefined"
+code_printing constant "frommanexp :: float \<Rightarrow> integer \<Rightarrow> float" \<rightharpoonup>
+  (SML) "frommanexp"
+declare frommanexp_def[code del]
+
+definition "Ulp_float x = frommanexp One (integer_of_int (Float.exponent (toFloat x) - 1))"
 
 
 subsection \<open>Needed Float Properties\<close>
