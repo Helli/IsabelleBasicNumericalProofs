@@ -47,8 +47,11 @@ value "let (a, b) = (float_of_int 345234523, float_of_int 34)
 
 subsection \<open>Printing\<close>
 
-(* output panel *)
-abbreviation "toNF \<equiv> normfloat o toFloat"
+--\<open>convert hardware floats to Float.float for an exact representation\<close>
+abbreviation toNF :: "float \<Rightarrow> Float.float" where
+  "toNF \<equiv> normfloat o toFloat"
+
+(* print to the output panel *)
 value "map toNF (vecSum l1)"
 value "map toNF (vecSum l2)"
 value "map toNF (vecSum l3)"
@@ -76,6 +79,6 @@ definition t_a where "t_a = rev (vecSum l3)"
 definition t_b where "t_b = VecSum_Joldes_et_al l3"
 
 value "map (\<lambda>(x, y). x \<doteq> y) (zip t_a t_b)"
-(* ToDo: replace by lemma *)
+(* ToDo: adjust to the new element order *)
 
 end
