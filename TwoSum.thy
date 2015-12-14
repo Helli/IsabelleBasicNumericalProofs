@@ -1,16 +1,11 @@
 theory TwoSum
 imports
+  TwoProdFMA
   test_utils
   "$AFP/IEEE_Floating_Point/FloatProperty"
 begin
 
 subsection \<open>Further operations\<close>
-
-definition "fma_float a b c = Float (Val a * Val b + Val c)"
-
-code_printing constant "fma_float :: float \<Rightarrow> float \<Rightarrow> float \<Rightarrow> float" \<rightharpoonup>
-  (SML) "Real.*+ ((_), (_), (_))"
-declare fma_float_def [code del]
 
 code_printing
   code_module "ULP_Float" \<rightharpoonup> (SML)
@@ -49,17 +44,17 @@ fun twoSum::"float * float \<Rightarrow> float *float"
 
 subsection \<open>Properties\<close>
 
-lemma twoSum_correct1:
+lemma twoSum_correct1_eq:
   shows "fst (twoSum (a, b)) = a + b"
   by (metis Pair_inject prod.collapse twoSum.simps)
 
-corollary twoSum_correct1':
+corollary twoSum_correct1:
   assumes "Finite (a + b)"
   shows "fst (twoSum (a, b)) \<doteq> (a + b)"
-  using assms float_eq twoSum_correct1 by presburger
+  using assms float_eq twoSum_correct1_eq by presburger
 
 corollary s_finite: "Finite (a + b) \<longleftrightarrow> Finite (fst (twoSum(a, b)))"
-  using twoSum_correct1 by simp
+  using twoSum_correct1_eq by simp
 
 corollary twoSum_swaps:
   assumes "Finite a" and "Finite b"
@@ -67,15 +62,56 @@ corollary twoSum_swaps:
   assumes "(s', e') = twoSum (b, a)"
   shows twoSum_swap: "s' = s" (*TODO: and "e' = e" *)
   and twoSum_swap': "s' \<doteq> s" (*TODO: and "e' \<doteq> e" *)
-  apply (metis assms float_plus_comm_eq fst_conv twoSum_correct1)
-  apply (metis assms float_plus_comm_eq fst_conv twoSum_correct1
+  apply (metis assms float_plus_comm_eq fst_conv twoSum_correct1_eq)
+  apply (metis assms float_plus_comm_eq fst_conv twoSum_correct1_eq
     float_eq_refl fadd_finite_notIsnan)
   done
 
 lemma twoSum_correct2:
   assumes "Finite a" and "Finite b" and "Finite (a + b)"
-  assumes "twoSum (a, b) = (r, s)"
-  shows "Val a + Val b = Val r + Val s"
+  assumes "(s, e) = twoSum (a, b)"
+  shows "Val a + Val b = Val s + Val e"
   sorry
+
+lemma fadd_twoSum_s_e:
+  assumes "(s, e) = twoSum (a, b)"
+  assumes "Finite a" "Finite b" "Finite s" "Finite e"
+  shows "(s + e) \<doteq> s"
+  using assms
+  sorry
+
+corollary twoSum_idempotent:
+  assumes "(s, e) = twoSum (a, b)"
+  assumes "(s', e') = twoSum (s, e)"
+  assumes "Finite a" "Finite b" "Finite s" "Finite e"
+  shows "s' \<doteq> s" (*TODO: and "e' \<doteq> e"*)
+  using assms
+  apply (metis fadd_twoSum_s_e fst_conv twoSum_correct1_eq)
+  done
+
+lemma "e \<le> ulp x"
+oops
+
+subsection \<open>regular and safe_bound\<close>
+
+--\<open>Ensure that the multiplication in safe_bound is exact.
+  ToDo: find a more sensible constraint using fracwidth\<close>
+fun length_ok :: "float list \<Rightarrow> bool" where
+  "length_ok [] = True" |
+  "length_ok (a # as) \<longleftrightarrow> (let
+    n = float_of_int (length as);
+    u = ulp_float a
+    in Finite (n*u) \<and> Iszero (snd (twoProdFMA n u)))"
+
+fun regular :: "float list \<Rightarrow> bool" where
+  "regular [] = True" |
+  "regular (a # as) \<longleftrightarrow> Finite a \<and> list_all (\<lambda>y. float_abs y \<le> ulp_float a) as
+    \<and> length_ok (a # as)"
+
+--\<open>safe_bound, when applied to a regular multiple precision float x (e.g. as produced by vecSum),
+gives a pair (v, b), such that x represents a value in v + [-b; b]\<close>
+fun safe_bound :: "float list \<Rightarrow> float \<times> float" where
+  "safe_bound [] = (Plus_zero, Plus_zero)" |
+  "safe_bound (x # xs) = (x, float_of_int (length xs) * ulp_float(x))"
 
 end

@@ -75,10 +75,10 @@ fun VecSum_Joldes_et_al :: "float list \<Rightarrow> float list" where
     (s, e) = twoSum (a0, a1) in
     (e # VecSum_Joldes_et_al (s # as)))"
 
-definition t_a where "t_a = rev (vecSum l3)"
-definition t_b where "t_b = VecSum_Joldes_et_al l3"
+definition t_a where "t_a = vecSum l1"
+definition t_b where "t_b = VecSum_Joldes_et_al l1"
 
-value "map (\<lambda>(x, y). x \<doteq> y) (zip t_a t_b)"
-(* ToDo: adjust to the new element order *)
+value "map (\<lambda>(x, y). x \<doteq> y) (zip t_a (last t_b # butlast (t_b)))"
+(* ToDo: replace by lemma *)
 
 end
