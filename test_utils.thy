@@ -109,4 +109,8 @@ definition println_sw_float::"Float.float \<Rightarrow> unit" where
      in
        ())"
 
+code_printing constant "Isnormal :: float \<Rightarrow> bool" \<rightharpoonup>
+  (SML) "Real.isNormal"
+declare [[code drop: "Isnormal"]]
+
 end
