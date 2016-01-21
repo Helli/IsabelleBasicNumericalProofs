@@ -46,7 +46,7 @@ lemma vecSum_regular:
   assumes "list_all Finite (vecSum a)"
   assumes "length_ok a"
   shows "regular (vecSum a)"
-  oops
+  sorry
 
 lemma length_cons: "length (itVecSum (a#as) b) = Suc (length as + length b)"
   apply (induction as arbitrary: a b)

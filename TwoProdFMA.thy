@@ -15,7 +15,7 @@ declare fma_float_def [code del]
 
 --\<open>This definition might not work in all special cases, consider
 
-value "fma_float Plus_zero (float_neg Plus_zero) (float_neg Plus_zero)"
+value [code] "fma_float Plus_zero (float_neg Plus_zero) (float_neg Plus_zero)"
 
 However, it should suffice for our purposes.\<close>
 
@@ -53,5 +53,3 @@ lemma twoProdFMA_correct2:
   sorry
 
 end
-sorry
-test against Dekker's TwoProd

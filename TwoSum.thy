@@ -89,8 +89,36 @@ corollary twoSum_idempotent:
   apply (metis fadd_twoSum_s_e fst_conv twoSum_correct1_eq)
   done
 
-lemma "e \<le> ulp x"
-oops
+lemma twoSum_e_le_ulp:
+  assumes "(s, e) = twoSum (a, b)"
+  assumes "Finite a" "Finite b" "Finite s" "Finite e"
+  shows"e \<le> ulp_float s"
+  sorry
+
+lemma twoSum_abs_le:
+  assumes "(s, e) = twoSum (a, b)"
+  assumes "Finite a" "Finite b" "Finite s" "Finite e"
+  shows "float_abs e \<le> float_abs s"
+  sorry
+
+lemma err:
+  assumes "Isnormal a" "Isnormal b" "Isnormal (a + b)"
+  shows "abs (Val a + Val b - Val (a + b)) \<le> abs (Val a)" (is "?abs_err \<le> abs (Val a)")
+using assms
+proof cases
+  assume f1: "abs (Val a) \<ge> abs (Val b)"
+  have f2: "Finite (a + b)"
+    by (simp add: Finite_def assms(3))
+  with f1 f2 have f4: "\<forall>fp. abs (Val a + Val b - Val fp) \<ge> ?abs_err"
+    sorry
+  then have "?abs_err \<le> abs (Val b)"
+    by (meson eq_iff order_trans sin_bound_lemma)
+  with f1 show ?thesis
+    by simp
+next
+  assume "\<not>abs (Val a) \<ge> abs (Val b)"
+  show ?thesis sorry
+qed
 
 subsection \<open>regular and safe_bound\<close>
 

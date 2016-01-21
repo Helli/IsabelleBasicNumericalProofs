@@ -10,7 +10,7 @@ definition l1 :: "float list" where
   "l1 = [
     float_of_int 43,
     float_of_int 34538,
-    float_of_int 3 / float_of_int 43,
+    float_of_int 3 / float_of_int 44,
     float_of_int 0,
     float_of_int 0,
     float_of_int (-348976754389282980)]"
