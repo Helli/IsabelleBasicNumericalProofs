@@ -2,6 +2,7 @@ theory MPF
 imports
   VecSum_tests
   "$AFP/IEEE_Floating_Point/FloatProperty"
+  "~~/src/HOL/Library/Monad_Syntax"
 begin
 
 type_synonym mpf = "float \<times> float list"
@@ -50,16 +51,82 @@ definition TwoSum :: "float \<Rightarrow> float \<Rightarrow> float \<times> flo
     y = a\<^sub>r + b\<^sub>r
     in (x, y))"
 
+lemma TwoSum_correct1: "TwoSum a b = (x, y) \<Longrightarrow> x = a + b"
+  by (auto simp: TwoSum_def Let_def)
+
 lemma TwoSum_correct:
   fixes a b x y :: float
+  assumes "Isnormal a"
+  assumes "Isnormal b"
+  assumes "Isnormal (a + b)"
   assumes out: "(x, y) = TwoSum a b"
-  shows TwoSum_correct1: "x = a + b"
-  and TwoSum_correct2: "Val a + Val b = Val x + Val y"
-  apply (metis TwoSum_def fst_conv out)
+  shows TwoSum_correct2: "Val a + Val b = Val x + Val y"
   sorry
 
 lemma swap: "TwoSum a b = TwoSum b a"
   sorry
+
+
+definition "nTwoSum a b =
+  (let r = TwoSum a b in
+    if Isnormal (fst r) \<and> Isnormal (snd r)
+    then Some r
+    else None)"
+
+lemma nTwoSum_normal1: "nTwoSum x y = Some (a, b) \<Longrightarrow> Isnormal a"
+  and nTwoSum_normal2: "nTwoSum x y = Some (a, b) \<Longrightarrow> Isnormal b"
+  by (auto simp: nTwoSum_def Let_def split: split_if_asm)
+
+lemma nTwoSum_correct1:
+  "nTwoSum a b = Some (x, y) \<Longrightarrow> x = a + b"
+  by (auto simp: nTwoSum_def Let_def TwoSum_correct1 split: split_if_asm)
+
+lemma nTwoSum_correct2:
+  fixes a b x y :: float
+  assumes "Isnormal a"
+  assumes "Isnormal b"
+  assumes "Isnormal (a + b)"
+  assumes out: "nTwoSum a b = Some (x, y)"
+  shows "Val a + Val b = Val x + Val y"
+  using out
+  by (auto intro!: TwoSum_correct assms simp: nTwoSum_def Let_def split: split_if_asm)
+
+definition "Val_mpf x = (let (a, es) = x in Val a + listsum (map Val es))"
+definition "Normal_mpf mpf \<longleftrightarrow> Isnormal (fst mpf) \<and> list_all Isnormal (snd mpf)"
+
+fun ngrow_mpf_slow :: "mpf \<Rightarrow> float \<Rightarrow> mpf option" where
+  "ngrow_mpf_slow (a, []) f =
+    do {
+      (x, y) \<leftarrow> nTwoSum f a; (* \<leftarrow> = <. *)
+      Some (x, [y])
+    }" |
+  "ngrow_mpf_slow (a, e # es) f =
+    do {
+      (a', es') \<leftarrow> ngrow_mpf_slow (e, es) f;
+      (x, y) \<leftarrow> nTwoSum a' a;
+      Some (x, y # es')
+    }"
+
+lemma
+  assumes "ngrow_mpf_slow mpf x = Some r"
+  assumes "Isnormal x" "Normal_mpf mpf"
+  shows "Val_mpf r = Val_mpf mpf + Val x"
+using assms
+proof (induction mpf x arbitrary: r rule: ngrow_mpf_slow.induct)
+  case (1 a f r)
+  from 1 have an: "Isnormal a" by (simp add: Normal_mpf_def)
+  from 1 have "nTwoSum f a \<bind> (\<lambda>(x, y). Some (x, [y])) = Some r"
+    by simp
+  then obtain x y where xy: "nTwoSum f a = Some (x, y)" and r: "r = (x, [y])"
+    by (auto simp: bind_eq_Some_conv)
+  from nTwoSum_normal1[OF xy] nTwoSum_normal2[OF xy]
+  have "Isnormal x" "Isnormal y" .
+  show ?case
+    using nTwoSum_correct2[OF \<open>Isnormal f\<close> an _ xy] \<open>Isnormal x\<close>
+      nTwoSum_correct1[OF xy]
+    by (auto simp: Val_mpf_def r split: prod.split)
+next
+  oops
 
 subsection \<open>MPF operations\<close>
 
@@ -220,13 +287,13 @@ lemma "Val (build_mpf fs) = listsum (map Val fs)"
 definition "list = l1"
 
 value "list"
-value "fold op+ (tl list) (hd list)"
+value "toNF (fold op+ (tl list) (hd list))"
 value "listsum (map toNF list)"
-value "let
+value "map toNF (let
   mpf = (hd list, tl list);
   (a, es) = mpf_transform mpf in
-  a # es"
-value "vecSum list"
+  a # es)"
+value "map toNF (vecSum list)"
 value "let
   mpf = (hd list, tl list);
   (a, es) = mpf_transform mpf in

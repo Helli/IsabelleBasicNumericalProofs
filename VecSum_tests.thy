@@ -10,7 +10,7 @@ definition l1 :: "float list" where
   "l1 = [
     float_of_int 43,
     float_of_int 34538,
-    float_of_int 3 / float_of_int 44,
+    float_of_int 3 / float_of_int 43,
     float_of_int 0,
     float_of_int 0,
     float_of_int (-348976754389282980)]"
@@ -75,10 +75,45 @@ fun VecSum_Joldes_et_al :: "float list \<Rightarrow> float list" where
     (s, e) = twoSum (a0, a1) in
     (e # VecSum_Joldes_et_al (s # as)))"
 
-definition t_a where "t_a = vecSum l1"
-definition t_b where "t_b = VecSum_Joldes_et_al l1"
+type_synonym mpf = "float \<times> float list"
 
-value "map (\<lambda>(x, y). x \<doteq> y) (zip t_a (last t_b # butlast (t_b)))"
-(* ToDo: replace by lemma *)
+fun TwoSum_component :: "float \<Rightarrow> mpf \<Rightarrow> mpf" where
+  "TwoSum_component f (a, es) = (let
+    (x, y) = twoSum (f, a)
+  in (x, y # es))"
+
+fun gmtoll :: "mpf \<Rightarrow> float \<Rightarrow> mpf" where
+  "gmtoll (a, es) f = foldr TwoSum_component (a # es) (f, [])"
+
+fun build_mpf :: "float list \<Rightarrow> mpf" where
+  "build_mpf [] = undefined" |
+  "build_mpf (f # fs) = foldl gmtoll (f, []) fs"
+
+abbreviation "l4 \<equiv> map float_of_int [456, 44, 2, -4463456345534634635, 25, 43534, 65]"
+abbreviation "l4' \<equiv> map float_of_int [456, 44, 2, -4463456345534634635, 25, 43534]"
+abbreviation "l4'' \<equiv> map float_of_int [456, 44, 2, -4463456345534634635, 25]"
+abbreviation "l4''' \<equiv> map float_of_int [456, 44, 2, -4463456345534634635]"
+abbreviation "l5 \<equiv> map float_of_int [456, 44, 2]"
+
+abbreviation "l \<equiv> l4"
+abbreviation "mpf_out \<equiv> build_mpf l"
+abbreviation "out \<equiv> fst mpf_out # snd mpf_out"
+
+value [code] "map (toNF) out"
+value [code] "out ! 0"
+value [code] "out ! 1"
+value [code] "out ! 2"
+value [code] "out ! 3"
+value [code] "out ! 4"
+value [code] "out ! 5"
+
+declare twoSum.simps[simp del]
+
+lemma "P mpf_out"
+  apply (clarsimp split: prod.split)
+
+lemma "P out"
+  apply (clarsimp split: prod.split)
+  unfolding gmtoll.simps
 
 end
