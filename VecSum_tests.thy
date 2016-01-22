@@ -10,7 +10,7 @@ definition l1 :: "float list" where
   "l1 = [
     float_of_int 43,
     float_of_int 34538,
-    float_of_int 3 / float_of_int 43,
+    float_of_int 3 / float_of_int 44,
     float_of_int 0,
     float_of_int 0,
     float_of_int (-348976754389282980)]"
@@ -75,6 +75,12 @@ fun VecSum_Joldes_et_al :: "float list \<Rightarrow> float list" where
     (s, e) = twoSum (a0, a1) in
     (e # VecSum_Joldes_et_al (s # as)))"
 
+definition t_a where "t_a = vecSum l1"
+definition t_b where "t_b = VecSum_Joldes_et_al l1"
+
+value "map (\<lambda>(x, y). x \<doteq> y) (zip t_a (last t_b # butlast (t_b)))"
+(* ToDo: replace by lemma *)
+
 type_synonym mpf = "float \<times> float list"
 
 fun TwoSum_component :: "float \<Rightarrow> mpf \<Rightarrow> mpf" where
@@ -111,9 +117,11 @@ declare twoSum.simps[simp del]
 
 lemma "P mpf_out"
   apply (clarsimp split: prod.split)
+  oops
 
 lemma "P out"
   apply (clarsimp split: prod.split)
   unfolding gmtoll.simps
+  oops
 
 end

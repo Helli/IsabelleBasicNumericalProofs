@@ -7,12 +7,6 @@ begin
 
 type_synonym mpf = "float \<times> float list"
 
-(*
-context
-  assumes normal: "Isnormal a"
-begin
-*)
-
 fun approx :: "mpf \<Rightarrow> float" where
   "approx (a, es) = a"
 
@@ -30,16 +24,21 @@ begin
       b\<^sub>v = x - a;
       y = b - b\<^sub>v
       in (x, y))"
-
-  lemma FastTwoSum_correct:
+    
+  lemma FastTwoSum_correct1: "FastTwoSum = (x, y) \<Longrightarrow> x = a + b"
+    by (auto simp: FastTwoSum_def Let_def)
+  
+  lemma FastTwoSum_correct2:
+    fixes x y :: float
+    assumes "Isnormal a"
+    assumes "Isnormal b"
+    assumes "Isnormal (a + b)"
     assumes out: "(x, y) = FastTwoSum"
-    shows FastTwoSum_correct1: "x = a + b"
-    and FastTwoSum_correct2: "Val a + Val b = Val x + Val y"
-    apply (metis FastTwoSum_def fst_conv out)
-    sorry
+    shows "Val a + Val b = Val x + Val y"
+    sorry 
 
 end
-thm FastTwoSum_def FastTwoSum_correct
+thm FastTwoSum_def FastTwoSum_correct1 FastTwoSum_correct2
 
 definition TwoSum :: "float \<Rightarrow> float \<Rightarrow> float \<times> float" where
   "TwoSum a b = (let
@@ -54,13 +53,13 @@ definition TwoSum :: "float \<Rightarrow> float \<Rightarrow> float \<times> flo
 lemma TwoSum_correct1: "TwoSum a b = (x, y) \<Longrightarrow> x = a + b"
   by (auto simp: TwoSum_def Let_def)
 
-lemma TwoSum_correct:
+lemma TwoSum_correct2:
   fixes a b x y :: float
   assumes "Isnormal a"
   assumes "Isnormal b"
   assumes "Isnormal (a + b)"
   assumes out: "(x, y) = TwoSum a b"
-  shows TwoSum_correct2: "Val a + Val b = Val x + Val y"
+  shows "Val a + Val b = Val x + Val y"
   sorry
 
 lemma swap: "TwoSum a b = TwoSum b a"
@@ -89,10 +88,11 @@ lemma nTwoSum_correct2:
   assumes out: "nTwoSum a b = Some (x, y)"
   shows "Val a + Val b = Val x + Val y"
   using out
-  by (auto intro!: TwoSum_correct assms simp: nTwoSum_def Let_def split: split_if_asm)
+  by (auto intro!: TwoSum_correct2 assms simp: nTwoSum_def Let_def split: split_if_asm)
 
 definition "Val_mpf x = (let (a, es) = x in Val a + listsum (map Val es))"
 definition "Normal_mpf mpf \<longleftrightarrow> Isnormal (fst mpf) \<and> list_all Isnormal (snd mpf)"
+definition "IsZero_mpf mpf \<longleftrightarrow> Iszero (approx mpf) \<and> errors mpf = Nil"
 
 fun ngrow_mpf_slow :: "mpf \<Rightarrow> float \<Rightarrow> mpf option" where
   "ngrow_mpf_slow (a, []) f =
@@ -280,7 +280,7 @@ fun mpf_transform :: "mpf \<Rightarrow> mpf" where
 (* ToDos *)
 fun mpf_eq :: "mpf \<Rightarrow> mpf \<Rightarrow> bool" where
   "mpf_eq a b \<longleftrightarrow> (let diff = mpf_add a (mpf_neg b)
-    in Iszero (approx diff) \<and> errors diff = Nil)"
+    in IsZero_mpf diff)"
 
 lemma "Val (build_mpf fs) = listsum (map Val fs)"
 
@@ -303,9 +303,5 @@ value "let
   mpf = (hd list, tl list);
   (a, es) = mpf_transform mpf in
   map toNF (a # es @ vecSum list)"
-
-(*
-end
-*)
 
 end
