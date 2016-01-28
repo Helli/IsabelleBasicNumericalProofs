@@ -94,10 +94,10 @@ definition "Val_mpf x = (let (a, es) = x in Val a + listsum (map Val es))"
 definition "Normal_mpf mpf \<longleftrightarrow> Isnormal (fst mpf) \<and> list_all Isnormal (snd mpf)"
 definition "IsZero_mpf mpf \<longleftrightarrow> Iszero (approx mpf) \<and> errors mpf = Nil"
 
-lemma induct_val: "Val_mpf (a, e # es) = Val a + Val_mpf (e, es)"
+lemma rec_val: "Val_mpf (a, e # es) = Val a + Val_mpf (e, es)"
   unfolding Val_mpf_def Let_def by simp
 
-lemma induct_normal: "Normal_mpf (a, e # es) \<longleftrightarrow> Isnormal a \<and> Normal_mpf (e, es)"
+lemma rec_normal: "Normal_mpf (a, e # es) \<longleftrightarrow> Isnormal a \<and> Normal_mpf (e, es)"
   unfolding Normal_mpf_def by simp
 
 fun ngrow_mpf_slow :: "mpf \<Rightarrow> float \<Rightarrow> mpf option" where
@@ -145,7 +145,7 @@ next
      using r1[unfolded bind_eq_Some_conv, simplified] by auto
   then have "Val_mpf r_full = Val_mpf (l2, r2 # r)" by simp
   also have "... = Val l2 + Val_mpf (r2, r)"
-    by (simp add: induct_val)
+    by (simp add: rec_val)
   also have "... = Val l2 + Val r2 + listsum(map Val r)"
     by (simp add: Val_mpf_def)
   also have "... = Val l + Val a + listsum(map Val r)"
@@ -153,7 +153,7 @@ next
     sorry
   thus ?case
     unfolding ngrow_mpf_slow.simps Val_mpf_def Let_def
-using "2.IH" "2.prems"(2) "2.prems"(3) Val_mpf_def \<open>Val l2 + Val r2 + listsum (map Val r) = Val l + Val a + listsum (map Val r)\<close> goal1 induct_normal r2 by fastforce
+using "2.IH" "2.prems"(2) "2.prems"(3) Val_mpf_def \<open>Val l2 + Val r2 + listsum (map Val r) = Val l + Val a + listsum (map Val r)\<close> goal1 rec_normal r2 by fastforce
 qed
 
 subsection \<open>MPF operations\<close>

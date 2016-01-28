@@ -52,16 +52,8 @@ lemma
     thm err1[of "Val a + Val b", OF True smaller]
     also have "... \<le> \<bar>Val b\<bar> + \<bar>error (Val a + Val b)\<bar>"
       by (simp add: abs_triangle_ineq)
-    also have "... \<le> \<bar>Val b\<bar> + \<bar>Val b\<bar>"
-      using error_at_worst_lemma[of "Val a + Val b" a, OF assms(3, 1)]
-      by (metis (no_types) abs_minus_cancel add_diff_cancel_left' add_left_mono minus_diff_eq)
-    thm float_add
-    thm err_smaller[of "Val a + Val b", OF assms(3)]
-    thm error_is_zero
-    thm error_at_worst_lemma
-    thm error_float_sub[of "a+b" a, OF 1(1) assms(1)]
     also have "\<dots> < threshold float_format"
-      sledgehammer
+
       oops
     note error_float_sub[of "a+b" a]
     
