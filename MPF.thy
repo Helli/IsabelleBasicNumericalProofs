@@ -94,6 +94,12 @@ definition "Val_mpf x = (let (a, es) = x in Val a + listsum (map Val es))"
 definition "Normal_mpf mpf \<longleftrightarrow> Isnormal (fst mpf) \<and> list_all Isnormal (snd mpf)"
 definition "IsZero_mpf mpf \<longleftrightarrow> Iszero (approx mpf) \<and> errors mpf = Nil"
 
+lemma induct_val: "Val_mpf (a, e # es) = Val a + Val_mpf (e, es)"
+  unfolding Val_mpf_def Let_def by simp
+
+lemma induct_normal: "Normal_mpf (a, e # es) \<longleftrightarrow> Isnormal a \<and> Normal_mpf (e, es)"
+  unfolding Normal_mpf_def by simp
+
 fun ngrow_mpf_slow :: "mpf \<Rightarrow> float \<Rightarrow> mpf option" where
   "ngrow_mpf_slow (a, []) f =
     do {
@@ -119,14 +125,36 @@ proof (induction mpf x arbitrary: r rule: ngrow_mpf_slow.induct)
     by simp
   then obtain x y where xy: "nTwoSum f a = Some (x, y)" and r: "r = (x, [y])"
     by (auto simp: bind_eq_Some_conv)
-  from nTwoSum_normal1[OF xy] nTwoSum_normal2[OF xy]
-  have "Isnormal x" "Isnormal y" .
+  from nTwoSum_normal1[OF xy]
+  have "Isnormal x".
   show ?case
     using nTwoSum_correct2[OF \<open>Isnormal f\<close> an _ xy] \<open>Isnormal x\<close>
       nTwoSum_correct1[OF xy]
     by (auto simp: Val_mpf_def r split: prod.split)
 next
-  oops
+  case (2 a e es f r_full)
+  note "2.prems"(1)[simplified, unfolded bind_eq_Some_conv, simplified]
+  thm bind_eq_Some_conv
+  obtain l r where goal1: "ngrow_mpf_slow (e, es) f = Some (l, r)"
+    and r1: "nTwoSum l a \<bind> (\<lambda>(x, y). Some (x, y # r)) =
+     Some r_full"
+  using "2.prems"(1) [unfolded "ngrow_mpf_slow.simps" bind_eq_Some_conv, simplified]
+    by auto
+  then obtain l2 r2 where l2: "nTwoSum l a = Some (l2, r2)" and
+     r2: "(l2, r2 # r) = r_full"
+     using r1[unfolded bind_eq_Some_conv, simplified] by auto
+  then have "Val_mpf r_full = Val_mpf (l2, r2 # r)" by simp
+  also have "... = Val l2 + Val_mpf (r2, r)"
+    by (simp add: induct_val)
+  also have "... = Val l2 + Val r2 + listsum(map Val r)"
+    by (simp add: Val_mpf_def)
+  also have "... = Val l + Val a + listsum(map Val r)"
+    using nTwoSum_correct2[of l a l2 r2]
+    sorry
+  thus ?case
+    unfolding ngrow_mpf_slow.simps Val_mpf_def Let_def
+using "2.IH" "2.prems"(2) "2.prems"(3) Val_mpf_def \<open>Val l2 + Val r2 + listsum (map Val r) = Val l + Val a + listsum (map Val r)\<close> goal1 induct_normal r2 by fastforce
+qed
 
 subsection \<open>MPF operations\<close>
 
