@@ -47,3 +47,16 @@ Temporary Items
 
 # generated file
 test.sml
+
+# document output
+output/document
+texts/texts.aux
+texts/texts.log
+texts/texts.out
+texts/texts.pdf
+texts/texts.synctex.gz
+texts/texts.toc
+texts/isabellesym.sty
+texts/pdfsetup.sty
+texts/comment.sty
+texts/isabelle.sty
