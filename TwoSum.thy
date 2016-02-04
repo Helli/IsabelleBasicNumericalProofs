@@ -41,6 +41,8 @@ fun twoSum::"float * float \<Rightarrow> float *float"
       e = da + db
     in (s, e))"
 
+code_thms twoSum
+export_code twoSum in SML
 subsection \<open>Properties\<close>
 
 lemma twoSum_correct1_eq:

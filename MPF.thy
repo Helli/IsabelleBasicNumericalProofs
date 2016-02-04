@@ -30,12 +30,12 @@ begin
   
   lemma FastTwoSum_correct2:
     fixes x y :: float
-    assumes "Isnormal a"
-    assumes "Isnormal b"
-    assumes "Isnormal (a + b)"
+    assumes "Finite a"
+    assumes "Finite b"
+    assumes "Finite (a + b)"
     assumes out: "(x, y) = FastTwoSum"
     shows "Val a + Val b = Val x + Val y"
-    sorry 
+    sorry
 
 end
 thm FastTwoSum_def FastTwoSum_correct1 FastTwoSum_correct2
@@ -55,9 +55,9 @@ lemma TwoSum_correct1: "TwoSum a b = (x, y) \<Longrightarrow> x = a + b"
 
 lemma TwoSum_correct2:
   fixes a b x y :: float
-  assumes "Isnormal a"
-  assumes "Isnormal b"
-  assumes "Isnormal (a + b)"
+  assumes "Finite a"
+  assumes "Finite b"
+  assumes "Finite (a + b)"
   assumes out: "(x, y) = TwoSum a b"
   shows "Val a + Val b = Val x + Val y"
   sorry
@@ -68,12 +68,15 @@ lemma swap: "TwoSum a b = TwoSum b a"
 
 definition "nTwoSum a b =
   (let r = TwoSum a b in
-    if Isnormal (fst r) \<and> Isnormal (snd r)
+    if Finite (fst r) \<and> Finite (snd r)
     then Some r
     else None)"
 
-lemma nTwoSum_normal1: "nTwoSum x y = Some (a, b) \<Longrightarrow> Isnormal a"
-  and nTwoSum_normal2: "nTwoSum x y = Some (a, b) \<Longrightarrow> Isnormal b"
+lemma nTwoSum_finite:
+  assumes "nTwoSum a b = Some (s, e)"
+  shows nTwoSum_finite1: "Finite s"
+  and nTwoSum_finite2: "Finite e"
+using assms
   by (auto simp: nTwoSum_def Let_def split: split_if_asm)
 
 lemma nTwoSum_correct1:
@@ -82,64 +85,98 @@ lemma nTwoSum_correct1:
 
 lemma nTwoSum_correct2:
   fixes a b x y :: float
-  assumes "Isnormal a"
-  assumes "Isnormal b"
-  assumes "Isnormal (a + b)"
+  assumes "Finite a"
+  assumes "Finite b"
+  assumes "Finite (a + b)"
   assumes out: "nTwoSum a b = Some (x, y)"
   shows "Val a + Val b = Val x + Val y"
   using out
   by (auto intro!: TwoSum_correct2 assms simp: nTwoSum_def Let_def split: split_if_asm)
 
-definition "Val_mpf x = (let (a, es) = x in Val a + listsum (map Val es))"
-definition "Normal_mpf mpf \<longleftrightarrow> Isnormal (fst mpf) \<and> list_all Isnormal (snd mpf)"
 definition "IsZero_mpf mpf \<longleftrightarrow> Iszero (approx mpf) \<and> errors mpf = Nil"
+definition "Val_mpf x = (let (a, es) = x in Val a + listsum (map Val es))"
+definition "Finite_mpf mpf \<longleftrightarrow> Finite (fst mpf) \<and> list_all Finite (snd mpf)"
 
+--\<open>Recursive versions for induction proofs:\<close>
 lemma rec_val: "Val_mpf (a, e # es) = Val a + Val_mpf (e, es)"
   unfolding Val_mpf_def Let_def by simp
-
-lemma rec_normal: "Normal_mpf (a, e # es) \<longleftrightarrow> Isnormal a \<and> Normal_mpf (e, es)"
-  unfolding Normal_mpf_def by simp
+lemma rec_finite: "Finite_mpf (a, e # es) \<longleftrightarrow> Finite a \<and> Finite_mpf (e, es)"
+  unfolding Finite_mpf_def by simp
 
 fun ngrow_mpf_slow :: "mpf \<Rightarrow> float \<Rightarrow> mpf option" where
-  "ngrow_mpf_slow (a, []) f =
+  no_error: "ngrow_mpf_slow (a, []) f =
     do {
       (x, y) \<leftarrow> nTwoSum f a; (* \<leftarrow> = <. *)
       Some (x, [y])
     }" |
-  "ngrow_mpf_slow (a, e # es) f =
+  in_between: "ngrow_mpf_slow (a, e # es) f =
     do {
       (a', es') \<leftarrow> ngrow_mpf_slow (e, es) f;
       (x, y) \<leftarrow> nTwoSum a' a;
       Some (x, y # es')
     }"
 
-lemma
+lemma preserve_finite:
   assumes "ngrow_mpf_slow mpf x = Some r"
-  assumes "Isnormal x" "Normal_mpf mpf"
-  shows "Val_mpf r = Val_mpf mpf + Val x"
+  assumes "Finite x" "Finite_mpf mpf"
+  shows "Finite_mpf r"
 using assms
 proof (induction mpf x arbitrary: r rule: ngrow_mpf_slow.induct)
-  case (1 a f r)
-  from 1 have an: "Isnormal a" by (simp add: Normal_mpf_def)
+case (1 a f)
+  from 1 have an: "Finite a" by (simp add: Finite_mpf_def)
   from 1 have "nTwoSum f a \<bind> (\<lambda>(x, y). Some (x, [y])) = Some r"
     by simp
   then obtain x y where xy: "nTwoSum f a = Some (x, y)" and r: "r = (x, [y])"
     by (auto simp: bind_eq_Some_conv)
-  from nTwoSum_normal1[OF xy]
-  have "Isnormal x".
+  moreover from nTwoSum_finite[OF xy]
+    have "Finite x" "Finite y".
+  ultimately show ?case
+    by (simp add: Finite_mpf_def)
+next
+case (2 a e es f r_full)
+  note "2.prems"(1)[simplified, unfolded bind_eq_Some_conv, simplified]
+  then obtain l r where goal1: "ngrow_mpf_slow (e, es) f = Some (l, r)"
+    and r1: "nTwoSum l a \<bind> (\<lambda>(x, y). Some (x, y # r)) = Some r_full"
+      by blast
+  then obtain l2 r2 where l2: "nTwoSum l a = Some (l2, r2)" and
+     r2: "(l2, r2 # r) = r_full"
+     using r1[unfolded bind_eq_Some_conv, simplified] by auto
+  from r2 have "?case = Finite_mpf (l2, r2 # r)" by simp
+  moreover have "Finite l2"
+    using nTwoSum_finite1[OF l2].
+  moreover have "Finite r2"
+    using nTwoSum_finite2[OF l2].
+  moreover from "2.IH"[OF goal1 "2.prems"(2)] have "list_all Finite r"
+    using "2.prems"(3) Finite_mpf_def by auto
+  ultimately
+    show ?case
+    by (simp add: Finite_mpf_def)
+qed
+
+lemma preserve_val:
+  assumes "ngrow_mpf_slow mpf x = Some r"
+  assumes "Finite x" "Finite_mpf mpf"
+  shows "Val_mpf r = Val_mpf mpf + Val x"
+using assms
+proof (induction mpf x arbitrary: r rule: ngrow_mpf_slow.induct)
+case (1 a f r)
+  from 1 have an: "Finite a" by (simp add: Finite_mpf_def)
+  from 1 have "nTwoSum f a \<bind> (\<lambda>(x, y). Some (x, [y])) = Some r"
+    by simp
+  then obtain x y where xy: "nTwoSum f a = Some (x, y)" and r: "r = (x, [y])"
+    by (auto simp: bind_eq_Some_conv)
+  from nTwoSum_finite1[OF xy]
+  have "Finite x".
   show ?case
-    using nTwoSum_correct2[OF \<open>Isnormal f\<close> an _ xy] \<open>Isnormal x\<close>
+    using nTwoSum_correct2[OF \<open>Finite f\<close> an _ xy] \<open>Finite x\<close>
       nTwoSum_correct1[OF xy]
     by (auto simp: Val_mpf_def r split: prod.split)
 next
-  case (2 a e es f r_full)
+case (2 a e es f r_full)
   note "2.prems"(1)[simplified, unfolded bind_eq_Some_conv, simplified]
-  thm bind_eq_Some_conv
-  obtain l r where goal1: "ngrow_mpf_slow (e, es) f = Some (l, r)"
-    and r1: "nTwoSum l a \<bind> (\<lambda>(x, y). Some (x, y # r)) =
-     Some r_full"
-  using "2.prems"(1) [unfolded "ngrow_mpf_slow.simps" bind_eq_Some_conv, simplified]
-    by auto
+  then obtain l r where goal1: "ngrow_mpf_slow (e, es) f = Some (l, r)"
+    and r1: "nTwoSum l a \<bind> (\<lambda>(x, y). Some (x, y # r)) = Some r_full"
+      by blast
   then obtain l2 r2 where l2: "nTwoSum l a = Some (l2, r2)" and
      r2: "(l2, r2 # r) = r_full"
      using r1[unfolded bind_eq_Some_conv, simplified] by auto
@@ -149,20 +186,46 @@ next
   also have "... = Val l2 + Val r2 + listsum(map Val r)"
     by (simp add: Val_mpf_def)
   also have "... = Val l + Val a + listsum(map Val r)"
-    using nTwoSum_correct2[of l a l2 r2]
-    sorry
-  thus ?case
-    unfolding ngrow_mpf_slow.simps Val_mpf_def Let_def
-using "2.IH" "2.prems"(2) "2.prems"(3) Val_mpf_def \<open>Val l2 + Val r2 + listsum (map Val r) = Val l + Val a + listsum (map Val r)\<close> goal1 rec_normal r2 by fastforce
+    proof -
+      from "2.prems" have "Finite l"
+        using Finite_mpf_def goal1 preserve_finite by auto
+      moreover have "Finite a"
+        using "2.prems"(3) Finite_mpf_def by simp
+      moreover have "Finite (l + a)"
+        using l2 nTwoSum_correct1 nTwoSum_finite1 by auto
+      moreover have "Val l + Val a = Val l2 + Val r2"
+        using nTwoSum_correct2[OF calculation l2].
+      ultimately show ?thesis
+        by simp
+    qed
+  finally show ?case
+    using 2 Val_mpf_def goal1 rec_finite by auto
 qed
+
+lemmas ngrow_mpf_correct =
+  preserve_finite
+  preserve_val
+
+primrec foldl_opt :: "('b \<Rightarrow> 'a \<Rightarrow> 'b option) \<Rightarrow> 'b \<Rightarrow> 'a list \<Rightarrow> 'b option" where
+foldl_opt_Nil:  "foldl_opt f a [] = Some a" |
+foldl_opt_Cons: "foldl_opt f a (x # xs) = do{
+    b \<leftarrow> f a x;
+    foldl_opt f b xs
+  }"
+
+fun nbuild_mpf :: "float list \<Rightarrow> mpf option" where
+  "nbuild_mpf [] = None" |
+  "nbuild_mpf (f # fs) = foldl_opt ngrow_mpf_slow (f, []) fs"
+thm foldl_Nil foldl_opt_Nil
+thm foldl_Cons foldl_opt_Cons
 
 subsection \<open>MPF operations\<close>
 
---\<open>The following operations are correct when their operands are nonoverlapping.
-  in this case, the result is nonoverlapping, too.\<close>
-
 fun mpf_neg :: "mpf \<Rightarrow> mpf" where
   "mpf_neg (a, es) = (float_neg a, map float_neg es)"
+
+--\<open>The following operations are correct when their operands are nonoverlapping.
+  in this case, the result is nonoverlapping, too.\<close>
 
 fun grow_mpf_slow :: "mpf \<Rightarrow> float \<Rightarrow> mpf" where
   "grow_mpf_slow (a, []) f = (let (x, y) = TwoSum f a in (x, [y]))" |
@@ -178,7 +241,7 @@ fun gm_step :: "float \<Rightarrow> mpf \<Rightarrow> mpf" where
   in (x, y # es))"
 
 fun gm_by_fold :: "mpf \<Rightarrow> float \<Rightarrow> mpf" where
-  "gm_by_fold (a, es) f = fold gm_step (a # es) (f, [])"
+  "gm_by_fold (a, es) f = foldr gm_step (a # es) (f, [])"
 
 fun grow_mpf_it :: "float list \<Rightarrow> float \<Rightarrow> float list \<Rightarrow> mpf" where (*better name: add*)
   "grow_mpf_it [] f hs = (f, hs)" |
@@ -306,28 +369,29 @@ fun mpf_transform :: "mpf \<Rightarrow> mpf" where
   "mpf_transform x = it_mpf_transform x []"
 
 (* ToDos *)
+(*
 fun mpf_eq :: "mpf \<Rightarrow> mpf \<Rightarrow> bool" where
   "mpf_eq a b \<longleftrightarrow> (let diff = mpf_add a (mpf_neg b)
     in IsZero_mpf diff)"
 
-lemma "Val (build_mpf fs) = listsum (map Val fs)"
-
+lemma "Val_mpf (build_mpf fs) = listsum (map Val fs)"
+*)
 definition "list = l1"
 
 value "list"
-value "toNF (fold op+ (tl list) (hd list))"
-value "listsum (map toNF list)"
-value "map toNF (let
+value [code] "toNF (fold op+ (tl list) (hd list))"
+value [code] "listsum (map toNF list)"
+value [code] "map toNF (let
   mpf = (hd list, tl list);
   (a, es) = mpf_transform mpf in
   a # es)"
-value "map toNF (vecSum list)"
-value "let
+value [code] "map toNF (vecSum list)"
+value [code] "let
   mpf = (hd list, tl list);
   (a, es) = mpf_transform mpf in
   map toNF (a # es)"
-value "map toNF (vecSum list)"
-value "let
+value [code] "map toNF (vecSum list)"
+value [code] "let
   mpf = (hd list, tl list);
   (a, es) = mpf_transform mpf in
   map toNF (a # es @ vecSum list)"
