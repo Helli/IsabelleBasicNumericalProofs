@@ -116,15 +116,31 @@ fun ngrow_mpf_slow :: "mpf \<Rightarrow> float \<Rightarrow> mpf option" where
       Some (x, y # es')
     }"
 
+
+lemmas ngrow_mpf_slow_induct = ngrow_mpf_slow.induct[case_names no_error in_between]
+
+lemma ngrow_mpf_correct:
+  assumes "ngrow_mpf_slow mpf x = Some r"
+  assumes "Finite x" "Finite_mpf mpf"
+  shows preserve_finite: "Finite_mpf r"
+    and preserve_val: "Val_mpf r = Val_mpf mpf + Val x"
+  unfolding atomize_conj
+using assms
+proof (induction mpf x arbitrary: r rule: ngrow_mpf_slow_induct)
+  case (no_error a f)
+  show finite: ?case
+    oops
+
+
 lemma preserve_finite:
   assumes "ngrow_mpf_slow mpf x = Some r"
   assumes "Finite x" "Finite_mpf mpf"
   shows "Finite_mpf r"
 using assms
-proof (induction mpf x arbitrary: r rule: ngrow_mpf_slow.induct)
-case (1 a f)
-  from 1 have an: "Finite a" by (simp add: Finite_mpf_def)
-  from 1 have "nTwoSum f a \<bind> (\<lambda>(x, y). Some (x, [y])) = Some r"
+proof (induction mpf x arbitrary: r rule: ngrow_mpf_slow_induct)
+case (no_error a f)
+  from no_error have an: "Finite a" by (simp add: Finite_mpf_def)
+  from no_error have "nTwoSum f a \<bind> (\<lambda>(x, y). Some (x, [y])) = Some r"
     by simp
   then obtain x y where xy: "nTwoSum f a = Some (x, y)" and r: "r = (x, [y])"
     by (auto simp: bind_eq_Some_conv)
@@ -133,8 +149,8 @@ case (1 a f)
   ultimately show ?case
     by (simp add: Finite_mpf_def)
 next
-case (2 a e es f r_full)
-  note "2.prems"(1)[simplified, unfolded bind_eq_Some_conv, simplified]
+case (in_between a e es f r_full)
+  note "in_between.prems"(1)[simplified, unfolded bind_eq_Some_conv, simplified]
   then obtain l r where goal1: "ngrow_mpf_slow (e, es) f = Some (l, r)"
     and r1: "nTwoSum l a \<bind> (\<lambda>(x, y). Some (x, y # r)) = Some r_full"
       by blast
@@ -146,8 +162,8 @@ case (2 a e es f r_full)
     using nTwoSum_finite1[OF l2].
   moreover have "Finite r2"
     using nTwoSum_finite2[OF l2].
-  moreover from "2.IH"[OF goal1 "2.prems"(2)] have "list_all Finite r"
-    using "2.prems"(3) Finite_mpf_def by auto
+  moreover from "in_between.IH"[OF goal1 "in_between.prems"(2)] have "list_all Finite r"
+    using "in_between.prems"(3) Finite_mpf_def by auto
   ultimately
     show ?case
     by (simp add: Finite_mpf_def)
@@ -201,6 +217,9 @@ case (2 a e es f r_full)
   finally show ?case
     using 2 Val_mpf_def goal1 rec_finite by auto
 qed
+
+text \<open>TODO: merge @{thm preserve_finite} and @{thm preserve_val}\<close>
+
 
 lemmas ngrow_mpf_correct =
   preserve_finite

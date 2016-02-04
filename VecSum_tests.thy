@@ -105,6 +105,14 @@ abbreviation "l \<equiv> l4"
 abbreviation "mpf_out \<equiv> build_mpf l"
 abbreviation "out \<equiv> fst mpf_out # snd mpf_out"
 
+definition "timing_test (_::unit) = build_mpf l4"
+
+ML \<open>val timing_test_ml = @{code timing_test}\<close>
+ML \<open>val build_mpf_ml = @{code build_mpf}\<close>
+ML \<open>build_mpf_ml [12.324245, 234.234, 12.234, 2345.0345]\<close>
+ML \<open>timing_test_ml ()\<close>
+
+
 value [code] "map (toNF) out"
 value [code] "out ! 0"
 value [code] "out ! 1"
