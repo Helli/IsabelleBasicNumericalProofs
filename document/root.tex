@@ -32,14 +32,15 @@
 % for uniform font size
 %\renewcommand{\isastyle}{\isastyleminor}
 
+\newcommand{\repeatisanl}[1]
+{\ifnum#1=0\else\isanewline\repeatisanl{\numexpr#1-1}\fi}
+\newcommand{\snip}[4]{\repeatisanl#2#4\repeatisanl#3}
 
 \begin{document}
 
-\title{Bachelorarbeit}
+\title{Snippet definitions}
 \author{Fabian Hellauer}
 \maketitle
-
-\tableofcontents
 
 % sane default for proof documents
 \parindent 0pt\parskip 0.5ex

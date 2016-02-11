@@ -1,2 +1,6 @@
-test: test.mlb test.sml unsynchronized.sml test_main.sml
-	mlton -codegen amd64 test.mlb
+
+thesis/snippets.tex: output/document/Snippets.tex
+	sed -n '/\\snip{/,/endsnip/p' output/document/Snippets.tex > thesis/snippets.tex
+
+output/document/Snippets.tex: thesis/Snippets.thy ROOT
+	isabelle build -D .

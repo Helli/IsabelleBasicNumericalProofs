@@ -49,14 +49,11 @@ Temporary Items
 test.sml
 
 # document output
-output/document
-texts/texts.aux
-texts/texts.log
-texts/texts.out
-texts/texts.pdf
-texts/texts.synctex.gz
-texts/texts.toc
-texts/isabellesym.sty
-texts/pdfsetup.sty
-texts/comment.sty
-texts/isabelle.sty
+output/
+thesis/snippets.tex
+thesis/thesis.aux
+thesis/thesis.log
+thesis/thesis.out
+thesis/thesis.pdf
+thesis/thesis.synctex.gz
+thesis/thesis.toc

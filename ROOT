@@ -3,6 +3,6 @@ session "hellauer" = "HOL" +
   theories [document = false]
     "test_utils"
   theories
-    "Thesis"
+    "thesis/Snippets"
   document_files
     "root.tex"
