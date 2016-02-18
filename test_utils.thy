@@ -36,16 +36,28 @@ code_module "ToManExp" \<rightharpoonup> (SML)
   in (mi, ei)
   end\<close>
 
-definition tomanexp::"float \<Rightarrow> integer * integer" where "tomanexp x = undefined"
+consts tomanexp::"float \<Rightarrow> integer * integer"
 code_printing constant "tomanexp :: float \<Rightarrow> integer * integer" \<rightharpoonup>
   (SML) "tomanexp"
-declare tomanexp_def[code del]
 
 definition toFloat::"float \<Rightarrow> Float.float" where
   "toFloat x = (let (m, e) = tomanexp x in Float.Float (int_of_integer m) (int_of_integer e))"
 
 value [code] "((Float.Float 123 (-13)) + (Float.Float 13 (-13))) * ((Float.Float 123 (-13)))"
 value [code] "toFloat (float_of 1 / float_of 1243313)"
+
+
+subsection \<open>Conversion from software floats\<close>
+
+code_printing
+code_module "FromManExp" \<rightharpoonup> (SML)
+  \<open>fun frommanexp m e = Real.fromManExp {man = Real.fromLargeInt m, exp = e}\<close>
+consts frommanexp::"integer \<Rightarrow> integer \<Rightarrow> float"
+code_printing constant "frommanexp :: integer \<Rightarrow> integer \<Rightarrow> float" \<rightharpoonup>
+  (SML) "frommanexp"
+
+definition of_Float::"Float.float \<Rightarrow> float" where
+  "of_Float x = (frommanexp (integer_of_int (Float.mantissa x)) (integer_of_int (Float.exponent x)))"
 
 
 subsection \<open>just for debugging: floats to strings and printing\<close>
@@ -92,8 +104,15 @@ code_printing constant "print :: String.literal \<Rightarrow> unit" \<rightharpo
   (SML) "TextIO.print"
 declare [[code drop: "print"]]
 
-lemma [code]: "term_of_class.term_of (x::float) \<equiv> Code.abort (string_of_float x) (\<lambda>_. undefined)"
+consts float_of_string::"String.literal \<Rightarrow> float"
+
+lemma [code]: "term_of_class.term_of (x::float) \<equiv>
+  Code_Evaluation.App
+    (Code_Evaluation.termify of_Float)
+    (term_of_class.term_of (normfloat (toFloat x)))"
   by (rule term_of_anything)
+
+value [code] "(One::float) + One + One"
 
 definition println::"String.literal \<Rightarrow> unit" where
   "println x = (let _ = print x in print (STR ''\<newline>''))"

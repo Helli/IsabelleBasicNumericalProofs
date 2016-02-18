@@ -103,7 +103,7 @@ abbreviation "l5 \<equiv> map float_of_int [456, 44, 2]"
 
 abbreviation "l \<equiv> l4"
 abbreviation "mpf_out \<equiv> build_mpf l"
-abbreviation "out \<equiv> fst mpf_out # snd mpf_out"
+definition "out \<equiv> fst mpf_out # snd mpf_out"
 
 definition "timing_test (_::unit) = build_mpf l4"
 
@@ -115,14 +115,15 @@ ML \<open>val test =  flat (replicate 100 [12.324245, 234.234, 12.234, 2345.0345
 ML \<open>build_mpf_ml test\<close>
 ML \<open>timing_test_ml ()\<close>
 
-
+value[code] out
+ML \<open>@{code out}\<close>
 value [code] "map (toNF) out"
-value [code] "out ! 0"
-value [code] "out ! 1"
-value [code] "out ! 2"
-value [code] "out ! 3"
-value [code] "out ! 4"
-value [code] "out ! 5"
+value [code] "map (toNF) out ! 0"
+value [code] "map (toNF) out ! 1"
+value [code] "map (toNF) out ! 2"
+value [code] "map (toNF) out ! 3"
+value [code] "map (toNF) out ! 4"
+value [code] "map (toNF) out ! 5"
 
 declare twoSum.simps[simp del]
 
@@ -131,7 +132,7 @@ lemma "P mpf_out"
   oops
 
 lemma "P out"
-  apply (clarsimp split: prod.split)
+  apply (clarsimp simp add: out_def split: prod.split)
   unfolding gmtoll.simps
   oops
 
