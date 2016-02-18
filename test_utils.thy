@@ -113,4 +113,12 @@ code_printing constant "Isnormal :: float \<Rightarrow> bool" \<rightharpoonup>
   (SML) "Real.isNormal"
 declare [[code drop: "Isnormal"]]
 
+code_printing constant "Finite :: float \<Rightarrow> bool" \<rightharpoonup>
+  (SML) "Real.isFinite"
+declare [[code drop: "Finite"]]
+
+definition "fin = Finite"
+ML \<open>val fin = @{code fin}\<close>
+ML \<open>val test = fin 0.4\<close>
+
 end
