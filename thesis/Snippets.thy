@@ -1,8 +1,12 @@
 (*<*)
 theory Snippets
-imports "../test_utils"
+imports
+  "../test_utils"
+  "../MPF"
 begin
 (*>*)
+
+section \<open>Test snippets\<close>
 
 text \<open>float def\<close>
 text_raw{*\snip{floatdef}{1}{2}{%*}
@@ -25,6 +29,20 @@ text_raw{*\snip{floattyp}{1}{2}{%*}
 text \<open>@{typ float}\<close>
 text_raw{*}%endsnip*}
 
+text\<open>MLreal\<close>
+text_raw{*\snip{MLreal}{1}{2}{%*}
+text\<open>@{ML_type real}\<close>
+text_raw{*}%endsnip*}
+
+text\<open>prf\<close>
+text_raw{*\snip{prf}{1}{2}{%*}
+text\<open>@{prf }\<close>
+text_raw{*}%endsnip*}
+
+text\<open>prft\<close>
+text_raw{*\snip{prft}{1}{2}{%*}
+text\<open>@{prf preserve_val}\<close>
+text_raw{*}%endsnip*}
 (*
 These are broken:
 

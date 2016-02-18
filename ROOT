@@ -1,5 +1,5 @@
 session "hellauer" = "HOL" +
-  options [document = pdf, document_output = "output"]
+  options [quick_and_dirty = true, document = pdf, document_output = "output"]
   theories [document = false]
     "test_utils"
   theories
