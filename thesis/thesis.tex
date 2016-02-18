@@ -50,6 +50,64 @@
 \section{Introduction}
 The transformation of numerical methods to use machine arithmetic is known to be error-prone. Therefore it is appropriate and important to exercise care to minimize errors. Most of the numerical methods implemented in Isabelle had already been proven to be correct beforehand in Mathematics. While most of these proofs work in a rather general setting, some require additional assumptions or preconditions that are not necessarily given in the context of real operational code, even if it uses the well-known IEEE standard of floating point arithmetic. As a related problem, this standard also introduces a lot of additional cases for operation results with its special values. In consequence, one might consider working with arbitrary precision formats that implement the entire number format using only the infinitely precise integer operations.
 
+\section{Code Analysis}
+
+\floatdef
+
+The mpf data format is designed to implement the ideas described in [Literaturanalyse] in a very simple way. It is defined as follows:
+
+%\mpf_def
+
+were the tuple between a float should be seen together as a non-empty float expansion, ordered by decreasing magnitude. The most significant component of the unevaluated sum of floats has a special place in the first tuple component. The list data structure enables the easy removal of zero components in the operations, while the separate handling of the first component makes the simple definition
+
+%\approx_def
+
+possible. This summand with the special name approx
+%\const_approx
+eliminates the need for a test to see if the list is non-empty when reading out the mpf's value. For a discussion as to how good this approximates the lists error-free value, see section     . When considering proof complexity, the special handling of the first component should not impose big problems compared to a standard list, only the induction step (where an element is inserted at position 2) will turn out to look more complicated (see section proofs).
+
+\section{IEEE in Isabelle}
+
+The "IEEE standard for floating point arithmetic" (link via bibtex) (IEEE 754-2008) is already modelled in the AFP-theory
+% @theory IEEE_Floating_Point
+While the formalization is quite general to accommodate for the many different allowed formats that arise when different values for precision and exponent range are used (the decimal formats are omitted), a strong precedence for the "binary64" format and the "roundTiesToEven" rounding mode can be observed. The functions using this mode are wrapped in definitions with simpler names, e.g. Finite
+In the case of the format, this is justified by it being
+In the case of the rounding mode, the IEEE standard defines this one to be the standard / default (p. 16)
+The general idea of the presented algorithms is to provide a way of performing error-free computations (within a finite subset of the rational numbers), while still making use of the accelarated hardware operations of IEEE-floats (affected by rounding after each step). This is done by keeping a "record" of all the errors made and storing them in a list alongside the approximation. Through clever cancelation of accumulated errors and removing the resulting zero-components, this list's length can be kept at a moderate level.
+A key component in being able to record the errors made upto a point is the TwoSum method first described by (first autor), possibly used earlier. A Central realisation is that for IEEE floating point numbers representing finites, as long as the result of a plus (or minus) operation does not lie outside the representable interval, the error of this calculation can be represented and even computed using again only float-addition and subtraction.
+Only the two defining properties (lemma best-approx and val-preserve) of the TwoSum-method are needed for the mpfs properties of error-free computation. Any software or hardware format that enables such a possibility to add two values and "record" the precise error is in principle suited for error-free computations using these recursive algorithms. Additional properties of the format like exact rounding will be needed to make use of Shewchuk's "nonoverlapping" property that he proves to be preserverved by them in (bibtex), (in particular, his definition of nonoverlapping requires a binary format). Since this property is needed to make assertions about the first components approximation quality (or the maximum expansion length as discussed in sect...), these cannot be provided as HOL-facts.
+
+\section{Code Generation}
+To profit from the accelerated execution of hardwired float operations, the HOL-code needs to be translated into a compilable language. To this end, Isabelle provides the
+%export_code
+command. It uses the 
+% code printing
+statements of the current context. However, due to such conversions being prone to introducing errors, only safe translations are being used by default, i.e. those that preserve the HOL-statements with high certainty. Thus, to enable the generation for hardware float using code, some additional translations need to be added. These should be tested thoroughly to ensure the resulting ML code's correctness.
+
+\section{Testing SML's "real" type}
+
+In SML the IEEE-floats are called
+% ML_real
+and use hardware operations by default. Thus, the translation
+% snippethier:
+% code_printing type_constructor float
+%  (SML) "real" and (OCaml) "float"
+
+from
+%theory Code_Float (bibtex)
+ 
+immediately suggests itself. When executing the in section     presented methods however, it turned out that the output was obviously wrong. Tracing this problem back to individual code blocks lead to the conclusion that already the
+% constTwoSum
+method delivered wrong results: The sum of the two input values did not match the sum of the two output values. Luckily, the error was so large that it was not overcast by the inexact representation as rounded sequence in base 10.
+% BeispielIsa2015
+This problem with the translated code turned out to stem from an unexpected computation of intermediate results in the "double extended" precision (bibtex IEEE section 3.7). The ML-code used it on some systems and thus computed the error value e as the error how it would be for an addition in extended precision. As this result needed to be translated into the 64-bit format for further usage, it needed to be rounded again at the end of the method. The error of this conversion is not accommodated for in the other output value designed to deliver the correctly rounded result of the 64-addition, thus nullifying the property of error-free transformation. The 80-bit registers are used until storage in a 64-bit value is enforced. Our results are thus not determined by the sequence of operations specified in the code, but by hardly controllable circumstances e.g. the way PolyML handles function calls (Fußnote mit Zitat aus David Matthews' erster Antwort). Worse still, due to different instruction sets being used, the correct behavior was depending on the operating system used (Fußnote mit Zitat aus David Matthews' erster Antwort). One way to circumvent these arbitrary changes in the results is to enforce the storage in a 64-bit value after every floating point operation. From this, the approach of the
+% "STORE"-method:
+was derived: The result of every addition or subtraction is written to a ML variable (which uses double precision). This value is then used for next operation. This leads to the correct results, but is very slow in execution as shown in section runtime.
+As another way of avoiding the unpredictable additional precision, the processors could be set to a mode that does not use this unwanted feature. This could be confirmed through compiling the exported TwoSum code with another ML compiler: running mlton with the flag "-codegen amd64" apparently produces a correct executable for TwoSum. It is desirable to make a similar modification to PolyML. This will also make the
+% value
+command use the correct code. Kindly, polyml maintainer David Mathews provided a changed version (link zu github) that should work on most systems to run Isabelle with and agreed to consider the behaviour of floats in future polyml-releases. It works by setting the precision to 64-bit in the control word of every float instruction. The change made it to polyML 5.6 (link zu "I committed a change...") and is thus available in Isabelle2016(link zu release notes).
+
+
 % optional bibliography
 %\bibliographystyle{abbrv}
 %\bibliography{root}
