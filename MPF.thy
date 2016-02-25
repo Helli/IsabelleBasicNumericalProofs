@@ -13,6 +13,10 @@ fun approx :: "mpf \<Rightarrow> float" where
 fun errors :: "mpf \<Rightarrow> float list" where
   "errors (a, es) = es"
 
+lemma "approx = fst" and "errors = snd"
+  by auto
+
+
 context
   fixes a b :: float
   assumes ge: "float_abs a \<ge> float_abs b"
@@ -93,9 +97,32 @@ lemma nTwoSum_correct2:
   using out
   by (auto intro!: TwoSum_correct2 assms simp: nTwoSum_def Let_def split: split_if_asm)
 
-definition "IsZero_mpf mpf \<longleftrightarrow> Iszero (approx mpf) \<and> errors mpf = Nil"
+(*Todo: try proofs below with fun here, or just use approx and errors
+instead of fst, snd and let*)
+definition "IsZero_mpf mpf \<longleftrightarrow> Iszero (approx mpf) \<and> errors mpf = []"
 definition "Val_mpf x = (let (a, es) = x in Val a + listsum (map Val es))"
+--\<open>sophisticated methods using Float.float might be faster\<close>
 definition "Finite_mpf mpf \<longleftrightarrow> Finite (fst mpf) \<and> list_all Finite (snd mpf)"
+
+fun valid :: "mpf \<Rightarrow> bool" where
+  "valid (a, es) = (case Iszero a of
+    True \<Rightarrow> es = [] |
+    False \<Rightarrow> Finite a \<and> list_all (\<lambda>f. Isdenormal f \<or> Isnormal f) es)"
+
+lemma float_distinct_10: "\<not> (Isnormal f \<and> Iszero f)"
+  by (auto simp add: float_defs is_normal_def is_zero_def)
+
+lemma valid_no_zero_components: "valid (a, es) \<Longrightarrow> list_all (\<lambda>f. \<not>Iszero f) es"
+  apply (simp split: bool.splits)
+  apply (induction es)
+  using float_distinct(9) float_distinct_10
+  apply auto
+  done
+
+lemma valid_finite: "valid (a, es) \<Longrightarrow> Finite_mpf (a, es)"
+  apply (simp split: bool.splits)
+  using Finite_mpf_def float_cases_finite float_distinct apply fastforce
+  by (metis (no_types, lifting) Ball_set Finite_def Finite_mpf_def fstI sndI)
 
 --\<open>Recursive versions for induction proofs:\<close>
 lemma rec_val: "Val_mpf (a, e # es) = Val a + Val_mpf (e, es)"
@@ -225,18 +252,6 @@ lemmas ngrow_mpf_correct =
   preserve_finite
   preserve_val
 
-primrec foldl_opt :: "('b \<Rightarrow> 'a \<Rightarrow> 'b option) \<Rightarrow> 'b \<Rightarrow> 'a list \<Rightarrow> 'b option" where
-foldl_opt_Nil:  "foldl_opt f a [] = Some a" |
-foldl_opt_Cons: "foldl_opt f a (x # xs) = do{
-    b \<leftarrow> f a x;
-    foldl_opt f b xs
-  }"
-
-fun nbuild_mpf :: "float list \<Rightarrow> mpf option" where
-  "nbuild_mpf [] = None" |
-  "nbuild_mpf (f # fs) = foldl_opt ngrow_mpf_slow (f, []) fs"
-thm foldl_Nil foldl_opt_Nil
-thm foldl_Cons foldl_opt_Cons
 
 subsection \<open>MPF operations\<close>
 
@@ -373,11 +388,19 @@ definition "output' = grow_mpf test_mpf (float_of 1)"
 lemma "P output'" unfolding output'_def test_mpf_def grow_mpf.simps grow_mpf_it.simps
   apply (clarsimp split: prod.splits) oops
 
-value "approx output"
+value "approx output'"
 
 fun build_mpf :: "float list \<Rightarrow> mpf" where
   "build_mpf [] = undefined" |
   "build_mpf (f # fs) = foldl grow_mpf (f,[]) fs"
+
+fun nbuild_mpf :: "float list \<Rightarrow> mpf option" where
+  "nbuild_mpf [] = undefined" |
+  "nbuild_mpf [f] = Some (f, [])" |
+  "nbuild_mpf (f # fs) = do {
+    a \<leftarrow> nbuild_mpf fs;
+    ngrow_mpf_slow a f
+  }"
 
 fun it_mpf_transform :: "mpf \<Rightarrow> float list \<Rightarrow> mpf" where
   "it_mpf_transform (a, []) bs = (a, rev bs)" |
@@ -414,5 +437,14 @@ value [code] "let
   mpf = (hd list, tl list);
   (a, es) = mpf_transform mpf in
   map toNF (a # es @ vecSum list)"
+
+ML \<open>val test_ml = @{code ngrow_mpf_slow}\<close>
+
+--\<open>Beware of the inexact representation\<close>
+ML \<open>val timing_test_ml = @{code timing_test}\<close>
+ML \<open>val grow_mpf_ml = @{code ngrow_mpf_slow}\<close>
+ML \<open>val test =  flat (replicate 100 [12.324245, 234.234, 12.234, 2345.0345])\<close>
+ML \<open>grow_mpf_ml (4.34,test) 5664.34\<close>
+ML \<open>timing_test_ml ()\<close>
 
 end

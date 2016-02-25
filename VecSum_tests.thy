@@ -110,7 +110,7 @@ definition "timing_test (_::unit) = build_mpf l4"
 --\<open>Beware of the inexact representation\<close>
 ML \<open>val timing_test_ml = @{code timing_test}\<close>
 ML \<open>timing_test_ml ()\<close>
-ML \<open>val build_mpf_ml = @{code nbuild_mpf}\<close>
+ML \<open>val build_mpf_ml = @{code build_mpf}\<close> (*ToDo: test nbuild_mpf *)
 ML \<open>val test =  flat (replicate 100 [12.324245, 234.234, 12.234, 2345.0345])\<close>
 ML \<open>build_mpf_ml test\<close>
 ML \<open>timing_test_ml ()\<close>

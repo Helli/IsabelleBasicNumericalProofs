@@ -57,7 +57,7 @@ code_printing constant "frommanexp :: integer \<Rightarrow> integer \<Rightarrow
   (SML) "frommanexp"
 
 definition of_Float::"Float.float \<Rightarrow> float" where
-  "of_Float x = (frommanexp (integer_of_int (Float.mantissa x)) (integer_of_int (Float.exponent x)))"
+  "of_Float x = frommanexp (integer_of_int (Float.mantissa x)) (integer_of_int (Float.exponent x))"
 
 
 subsection \<open>just for debugging: floats to strings and printing\<close>
@@ -139,5 +139,12 @@ declare [[code drop: "Finite"]]
 definition "fin = Finite"
 ML \<open>val fin = @{code fin}\<close>
 ML \<open>val test = fin 0.4\<close>
+
+definition "z = Float.Float 54252343554345363463465345345234534534624525234345663462452453423232345234523452352523453453465645639099999999998000000000000000000000000000000890349899988888888843242646554 343"
+ML \<open>val z = @{code z};
+  val of_Float = @{code of_Float}\<close>
+ML \<open>of_Float z\<close>
+value [code] "Float.Float 4 3"
+value [code] "of_Float z"
 
 end

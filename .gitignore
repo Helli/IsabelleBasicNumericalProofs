@@ -50,6 +50,7 @@ test.sml
 
 # document output
 output/
+output/document.pdf
 thesis/snippets.tex
 thesis/thesis.aux
 thesis/thesis.log
