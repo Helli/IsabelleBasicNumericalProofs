@@ -49,7 +49,7 @@
 
 \section{Abstract}
 
-Many problems in geometry or topology systems can only be approximated by large computations with long sequences of operations. To best benefit from the speedup of machine computation, one has to make use of the hardwired floating point instructions. However, using the IEEE-floats directly would often create the need for a complicated numerical analysis due to them being affected by round-off.
+Many problems in geometry or topology systems can only be approximated by large computations with long sequences of operations. To best benefit from the speedup of machine computation, one has to make use of the hardwired floating point instructions that are specified in the IEEE-754-standard. However, using the IEEE-floats directly would often create the need for a complicated numerical analysis due to them being affected by round-off.
 Another one of their properties removes this need however: Alongside the result, the round-off error of an addition or subtraction can be computed. Storing and using it in further operations thus makes the computation error-free.
 We give a simple data format in Isabelle/HOL that uses this approach to provide fast algorithms for error-free addition, subtraction and multiplication.
 
@@ -72,7 +72,7 @@ Only a short operation sequence first described by ... is needed.
 
 \subsection{Contributions}
 We provide the data format \typmpf
-It follows "float expansion" approach where the accumulated errors are stored in a list alongside with an approximation for the result of the executed sequence. It provides addition, subtraction and multiplication within the numbers representable in this way (a finite superset to IEEE floats).
+, which stands for "multiple precision float". It follows the "float expansion" approach where the accumulated errors are stored in a list alongside with an approximation for the result of the executed sequence. It provides addition, subtraction and multiplication within the numbers representable in this way (a finite superset to IEEE floats).
 
 \subsection{Formalization in Isabelle}
 We use the formal setting of Isabelle/HOL to specify and proof correct the procedures, but we make sure all of them can be executed by slightly expanding Isabelle's SML code generation for IEEE-floats.
@@ -84,7 +84,7 @@ The task for this bachelor thesis is to provide a multiple precision float arith
 
 \subsection{Unsortiertes Einleitungszeug}
 
-When attacking computational problems by machine, a trade-off between complexity and speed has to be made: Using an implementation of infinitely precise rationals might severely slow down the code's execution, whereas replacing the sequence of operations by their IEEE745-counterparts will cause round-off errors to appear. Numerical code using hardware floating point operations has to consider the problem of round-off. To avoid the tedious analysis of these accumulating errors
+When attacking computational problems by machine, a trade-off between complexity and speed has to be made: Using an implementation of infinitely precise rationals might severely slow down the code's execution, whereas replacing the sequence of operations by their IEEE754-counterparts will cause round-off errors to appear. Numerical code using hardware floating point operations has to consider the problem of round-off. To avoid the tedious analysis of these accumulating errors
 
 \section{Code Analysis}
 
@@ -106,7 +106,37 @@ The "IEEE standard for floating point arithmetic" (link via bibtex) (IEEE 754-20
 While the formalization is quite general to accommodate for the many different allowed formats that arise when different values for precision and exponent range are used (the decimal formats are omitted), a strong precedence for the "binary64" format and the "roundTiesToEven" rounding mode can be observed. The functions using this mode are wrapped in definitions with simpler names, e.g. Finite
 In the case of the format, this is justifiable by it being in wide and hardware-implemented on most systems.
 In the case of the rounding mode, the IEEE standard defines this one to be the standard / default (p. 16).
-We will also use this format and rounding mode, which also enables us to use the codeprinting defined in theory CodeFloat. The "TiesToEvenRule" is explicitly proven to be a right choice for the TwoSum-properties[HFPA 4.3 Theorem 4] and thus for all the presented algorithms.
+We will also use this format and rounding mode, which also enables us to use the codeprinting defined in theory CodeFloat. The "TiesToEvenRule" is the only available round-to-nearest mode, which is explicitly required for the TwoSum-properties[HFPA 4.3.3] and thus for all the presented algorithms.
+
+\subsection{Error free operations}
+
+The core idea is to provide an error-free form of the basic operations between IEEE floats. Since we want the output to be floats as well, and rounding occurs for almost all input values, the only way to do so is to use the round-affected IEEE operation and then computing the error, also represented as floats. For the basic operations +, - and *, the error will turn out to be exactly another float value that can be easily computed. Thus, we compute a value e such that a diamond b = r + e,
+where r is the result that the IEEE-operation returns.
+Thus, t will have the sign - or + corresponding to wether r is above resp. below the exact mathematical result of a diamond b.
+
+\paragraph{FastTwoSum}
+
+For an addition of a and , we can perform 
+%  FastTwoSumdef
+where the operations are the round-affected IEEE-operations.
+If the exponent , one can show that s-a is exactly representable as an IEEE-float by analysing the needed mantissa length for the result. This requires two case distincions... Using the fact that - provides correct rounding, we know that t will have exactly this value.
+
+\paragraph{TwoSum}
+
+The condition ... is fullfilled if ...
+
+we can branch 
+
+This sequence is not used by many authors because they want to execute their code on optimized floating point hardware, where the condition check leads to penalties in execution speed since its outcome cannot be predicted. Instead, they perform
+
+Notice that the first 
+
+We compare the speed of TwoSumIf and TwoSum in section ...
+
+\subsection{Using functional construct}
+In the literature, the algorithms are presented in an imperative language, with the float expansion stored in an array-like structure. However, the "random-access" (TODO) features are not used: only standard sorted traversal is performed. Thus, there is the easy possibility to use the HOL
+%list
+instead. List traversal can be performed by foldl or foldr, possibly benefiting from compiler optimization. For clarification, we provide some algorithms in a recursive style instead, see section compress.We choose to store the components of largest magnitudes in the lists initial components as they can be accessed very easily.
 
 \subsection{Strategy}
 
