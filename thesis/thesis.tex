@@ -51,39 +51,39 @@
 
 Many problems in geometry or topology systems can only be approximated by large computations with long sequences of operations. To best benefit from the speedup of machine computation, one has to make use of the hardwired floating point instructions that are specified in the IEEE-754-standard. However, using the IEEE-floats directly would often create the need for a complicated numerical analysis due to them being affected by round-off.
 Another one of their properties removes this need however: Alongside the result, the round-off error of an addition or subtraction can be computed. Storing and using it in further operations thus makes the computation error-free.
-We give a simple data format in Isabelle/HOL that uses this approach to provide fast algorithms for error-free addition, subtraction and multiplication.
+We give a simple data format in Isabelle/HOL(link) that uses this approach to provide fast algorithms for error-free addition, subtraction and multiplication.
 
 \section{Introduction}
 
-When attacking computational problems by machine, often times fixed size numbers have to be used: Full implementations of computable numbers are very slow, mostly because they don't use the hardwired floating point operations that are available to modern systems. If the finite set of these machine numbers suffice (or an approximation within their range), the use of hard-wired operations can speed up the computation by a large factor. However, they introduce the problem of round-off, which, when not handled, will affect the output's precision in complex ways.
+When attacking computational problems by machine, often times fixed precision numbers have to be used: Arbitrary precision numbers are very slow, mostly because they don't use the hardware floating point operations that are available to modern systems. If the finite set of these machine numbers suffice (or an approximation within their range), the use of hard-wired operations can speed up the computation by a large factor. However, they introduce the problem of round-off, which, when not handled, will affect the output's precision in complex ways.
 
 \subsection{Round-off}
 Round-off occurs when a the result of a floating point operation cannot be represented using the fixed size of exponent and mantissa defined by the floating point format. It also occurs when casting measured or infinitely precise data in such a limited precision format.
 
 \paragraph{Dealing with round-off}
-If round-off affected arithmetic is used in a long sequence of operations, the result will only approximate within a certain range. Correctness proofs for this range will require a tedious numerical analysis of the algorithms which is very complex to do formally.
+If round-off affected arithmetic is used in a long sequence of operations, the result will only approximate within a certain range. Correctness proofs for assertions about this range will require a tedious numerical analysis of the algorithms which is very complex to do formally.
 
 \paragraph{Avoiding round-off}
 Another approach is to avoid round-off altogether: However, using an implementation of infinitely precise rationals might severely slow down the code's execution due to them not making use of the hardwired floating point operations that modern machines provide.
 
-\paragraph{Float expansions}
-If a finite set of numbers with magnitude and precision in the range of IEEE floats suffices however, both the precision and fast execution speed can be preserved: This thesis presents the "float expansion" approach where the accumulated errors are stored in a list alongside with an approximation for the result of the executed sequence. It provides addition, subtraction and multiplication within the numbers representable in this way (a finite superset to IEEE floats).
-Only a short operation sequence first described by ... is needed.
-
-\subsection{Contributions}
-We provide the data format \typmpf
-, which stands for "multiple precision float". It follows the "float expansion" approach where the accumulated errors are stored in a list alongside with an approximation for the result of the executed sequence. It provides addition, subtraction and multiplication within the numbers representable in this way (a finite superset to IEEE floats).
-
-\subsection{Formalization in Isabelle}
-We use the formal setting of Isabelle/HOL to specify and proof correct the procedures, but we make sure all of them can be executed by slightly expanding Isabelle's SML code generation for IEEE-floats.
-
+\paragraph{Float expansions} If a finite set of numbers with magnitude and precision in the range of IEEE floats suffices however, both the precision and fast execution speed can be preserved: This thesis presents the "float expansion" approach where the accumulated errors are stored in a list alongside with an approximation for the result of the executed sequence. It provides addition, subtraction and multiplication within the numbers representable in this way (a finite superset to IEEE floats).
 
 \subsection{Problem statement}
+Isabelle (link) already provides the arbitrary precision format
+%real
+in its (library...) . The IEEE floats a are modeled in the AFP-theroy
+% link 
+The task for this bachelor thesis is to present a multiple precision float arithmetic in Isabelle/HOL using the "floating point expansion" approach" and to verify its correctness
+(This is described in several scientific papers as "floating point expansion " or "multiple term" strategy. It is an easy way to gain considerable amounts of precision while still using the IEEE floating point specification to enable the widely available acceleration of hardware operations.)
 
-The task for this bachelor thesis is to provide a multiple precision float arithmetic in Isabelle/HOL. This is described in several scientific papers as "floating point expansion " or "multiple term" strategy. It is an easy way to gain considerable amounts of precision while still using the IEEE floating point specification to enable the widely available acceleration of hardwired operations.
+\subsection{Contributions}
+We explain different aspects of this "floating point expansion" approach and then provide the data format \typmpf
+, which stands for "multiple precision float". It implements error-free addition, subtraction and multiplication within the numbers representable in this way (a finite superset to IEEE floats).
+We use the formal setting of Isabelle/HOL to specify and prove correct the algorithms, but we make sure all of them can easily be executed by adapting Isabelle's SML code generation for IEEE-floats.
 
 \subsection{Unsortiertes Einleitungszeug}
-
+Vermutlich alles schon eingebaut:
+Only a short operation sequence first described by ... is needed.
 When attacking computational problems by machine, a trade-off between complexity and speed has to be made: Using an implementation of infinitely precise rationals might severely slow down the code's execution, whereas replacing the sequence of operations by their IEEE754-counterparts will cause round-off errors to appear. Numerical code using hardware floating point operations has to consider the problem of round-off. To avoid the tedious analysis of these accumulating errors
 
 \section{Code Analysis}
@@ -103,27 +103,27 @@ possible. This summand with the special name \constapprox eliminates the need fo
 \subsection{IEEE in Isabelle}
 
 The "IEEE standard for floating point arithmetic" (link via bibtex) (IEEE 754-2008) is already modeled in the AFP-theory IEEE\_Floating\_Point/\IEEE.
-While the formalization is quite general to accommodate for the many different allowed formats that arise when different values for precision and exponent range are used (the decimal formats are omitted), a strong precedence for the "binary64" format and the "roundTiesToEven" rounding mode can be observed. The functions using this mode are wrapped in definitions with simpler names, e.g. Finite
+While the formalization is quite general to accommodate for the many different allowed formats that arise when different values for precision and exponent range are used (the decimal formats are omitted), a strong precedence for the "binary64" format and the "roundTiesToEven" rounding mode can be observed. The functions using this mode are lifted to definitions with simpler names, e.g. Finite
 In the case of the format, this is justifiable by it being in wide and hardware-implemented on most systems.
 In the case of the rounding mode, the IEEE standard defines this one to be the standard / default (p. 16).
-We will also use this format and rounding mode, which also enables us to use the codeprinting defined in theory CodeFloat. The "TiesToEvenRule" is the only available round-to-nearest mode, which is explicitly required for the TwoSum-properties[HFPA 4.3.3] and thus for all the presented algorithms.
+We will also use this format and rounding mode, which also enables us to use the codeprinting defined in theory CodeFloat. The "roundTiesToEven" rule is the only available round-to-nearest mode, which is explicitly required for the TwoSum-properties[HFPA 4.3.3] and thus for all the presented algorithms.
 
 \subsection{Error free operations}
 
 The core idea is to provide an error-free form of the basic operations between IEEE floats. Since we want the output to be floats as well, and rounding occurs for almost all input values, the only way to do so is to use the round-affected IEEE operation and then computing the error, also represented as floats. For the basic operations +, - and *, the error will turn out to be exactly another float value that can be easily computed. Thus, we compute a value e such that a diamond b = r + e,
 where r is the result that the IEEE-operation returns.
-Thus, t will have the sign - or + corresponding to wether r is above resp. below the exact mathematical result of a diamond b.
+Thus, t will have the sign - or + corresponding to whether r is above resp. below the exact mathematical result of a diamond b.
 
+%
 \paragraph{FastTwoSum}
-
 For an addition of a and , we can perform 
 %  FastTwoSumdef
 where the operations are the round-affected IEEE-operations.
-If the exponent , one can show that s-a is exactly representable as an IEEE-float by analysing the needed mantissa length for the result. This requires two case distincions... Using the fact that - provides correct rounding, we know that t will have exactly this value.
+If the exponent , one can show that s-a is exactly representable as an IEEE-float by analyzing the needed mantissa length for the result. This requires two case distinctions... Using the fact that - provides correct rounding, we know that t will have exactly this value.
 
 \paragraph{TwoSum}
 
-The condition ... is fullfilled if ...
+The condition ... is fulfilled if ...
 
 we can branch 
 
@@ -153,6 +153,8 @@ To profit from the accelerated execution of hardwired float operations, the HOL-
 command. It uses the 
 % code printing
 statements of the current context. However, due to such conversions being prone to introducing errors, only safe translations are being used by default, i.e. those that preserve the HOL-statements with high certainty. Thus, to enable the generation for hardware float using code, some additional translations need to be added. These should be tested thoroughly to ensure the resulting ML code's correctness.
+
+Sie musste außerdem erweitert werden, um die Ausgabe des generierten Codes anzuzeigen und um die Überprüfungen auf Überlauf durchführen zu können.
 
 % Stil im Titel
 \subsection{Testing SML's "real" type}
@@ -253,10 +255,6 @@ however
 %"Isvalid a ==> Val (from_real (Val_mpf a)) = Val_mpf a"
 is.
 
-\subsection{Possible Applications}
-Only problems where the input is exactly representable as IEEE floats (or measured within their precision) truly benefit from the error-free
-%mpf
-operations. In other applications, some loss of precision is impossible to avoid. Depending on some numerical properties, these errors might amplify during the course of further computation and make the result inexact again. A main drawback is also that no division operator is available.
 
 
 \section{Literature review}
@@ -266,6 +264,18 @@ All of the consulted authors (Joldes et al., Shewchuck, Priest, HBFA) aim at spe
 focused on using the functional style to make an understandable implemenation where modifications like the zero-component removal or additional restraints on mpf properties (see section .. ) are easily added.
 This general setting is much more suited for Isabelle which mainly serves the goal of making assertions about code correctness, not the (very system dependant) execution speed.
 
+
+\section{Results and conclusion}
+
+Im Theorembeweiser Isabelle waren die IEEE-754-floats schon modelliert. Darauf aufbauend stellt diese Arbeit eine Möglichkeit zur Verfügung, sie für ein schnelles rundungsfreies Addieren und Subtrahieren zu verwenden. Dazu haben wir die Algorithmen dafür aus der Literatur in die Sprache HOL übersetzt und für unsere Zwecke an das funktionale Setting angepasst.
+
+\subsection{Possible Applications}
+Only problems where the input is exactly representable as IEEE floats (or measured within their precision) truly benefit from the error-free
+%mpf
+operations. In other applications, some loss of precision is impossible to avoid. Depending on some numerical properties, these errors might amplify during the course of further computation and make the result inexact again. A main drawback is also that no division operator is available.
+
+
+... ist damit das Format "Multiple Precision Float" fertiggestellt und einsatzbereit.
 
 % optional bibliography
 %\bibliographystyle{abbrv}
@@ -277,3 +287,13 @@ This general setting is much more suited for Isabelle which mainly serves the go
 %%% mode: latex
 %%% TeX-master: t
 %%% End:
+
+
+
+
+
+
+
+
+
+

@@ -27,7 +27,7 @@ text_raw\<open>}%endsnip\<close>
 (*<*) hide_const approx (*>*)
 
 paragraph \<open>constapprox\<close>
-text_raw\<open>\snip{constapprox}{1}{1}{%\<close>
+text_raw\<open>\snip{constapprox}{0}{0}{%\<close>
 txt \<open>@{const approx}\<close>
 text_raw\<open>}%endsnip\<close>
 
@@ -87,6 +87,12 @@ paragraph \<open>TestSnippet\<close>
 text_raw\<open>\snip{test}{1}{2}{%\<close>
 definition "ym = Plus_zero"
 text_raw\<open>}%endsnip\<close>
+
+value [code] "Val (float_of 5)"
+
+lemma [code]: "Val f = real_of_float (toFloat f)" sorry
+
+value [code] "Val (float_of 5)"
 
 (*
 These are broken:

@@ -16,6 +16,15 @@ fun errors :: "mpf \<Rightarrow> float list" where
 lemma "approx = fst" and "errors = snd"
   by auto
 
+--\<open>Use another notation for the possibly inexact IEEE-operations\<close>
+abbreviation round_affected_plus :: "float \<Rightarrow> float \<Rightarrow> float" (infixl "\<oplus>" 65) where
+  "round_affected_plus a b \<equiv> a + b"
+
+abbreviation round_affected_minus :: "float \<Rightarrow> float \<Rightarrow> float" (infixl "\<ominus>" 65) where
+  "round_affected_minus a b \<equiv> a - b"
+
+abbreviation round_affected_times :: "float \<Rightarrow> float \<Rightarrow> float" (infixl "\<otimes>" 65) where
+  "round_affected_times a b \<equiv> a * b"
 
 context
   fixes a b :: float
@@ -24,19 +33,19 @@ begin
 
   definition FastTwoSum :: "float \<times> float" where
     "FastTwoSum = (let
-      x = a + b;
-      b\<^sub>v = x - a;
-      y = b - b\<^sub>v
+      x = a \<oplus> b;
+      b\<^sub>v = x \<ominus> a;
+      y = b \<ominus> b\<^sub>v
       in (x, y))"
     
-  lemma FastTwoSum_correct1: "FastTwoSum = (x, y) \<Longrightarrow> x = a + b"
+  lemma FastTwoSum_correct1: "FastTwoSum = (x, y) \<Longrightarrow> x = a \<oplus> b"
     by (auto simp: FastTwoSum_def Let_def)
   
   lemma FastTwoSum_correct2:
     fixes x y :: float
     assumes "Finite a"
     assumes "Finite b"
-    assumes "Finite (a + b)"
+    assumes "Finite (a \<oplus> b)"
     assumes out: "(x, y) = FastTwoSum"
     shows "Val a + Val b = Val x + Val y"
     sorry
@@ -46,22 +55,22 @@ thm FastTwoSum_def FastTwoSum_correct1 FastTwoSum_correct2
 
 definition TwoSum :: "float \<Rightarrow> float \<Rightarrow> float \<times> float" where
   "TwoSum a b = (let
-    x = a + b;
-    b\<^sub>v = x - a;
-    a\<^sub>v = x - b\<^sub>v;
-    b\<^sub>r = b - b\<^sub>v;
-    a\<^sub>r = a - a\<^sub>v;
-    y = a\<^sub>r + b\<^sub>r
+    x = a \<oplus> b;
+    b\<^sub>v = x \<ominus> a;
+    a\<^sub>v = x \<ominus> b\<^sub>v;
+    b\<^sub>r = b \<ominus> b\<^sub>v;
+    a\<^sub>r = a \<ominus> a\<^sub>v;
+    y = a\<^sub>r \<oplus> b\<^sub>r
     in (x, y))"
 
-lemma TwoSum_correct1: "TwoSum a b = (x, y) \<Longrightarrow> x = a + b"
+lemma TwoSum_correct1: "TwoSum a b = (x, y) \<Longrightarrow> x = a \<oplus> b"
   by (auto simp: TwoSum_def Let_def)
 
 lemma TwoSum_correct2:
   fixes a b x y :: float
   assumes "Finite a"
   assumes "Finite b"
-  assumes "Finite (a + b)"
+  assumes "Finite (a \<oplus> b)"
   assumes out: "(x, y) = TwoSum a b"
   shows "Val a + Val b = Val x + Val y"
   sorry
@@ -84,14 +93,14 @@ using assms
   by (auto simp: nTwoSum_def Let_def split: split_if_asm)
 
 lemma nTwoSum_correct1:
-  "nTwoSum a b = Some (x, y) \<Longrightarrow> x = a + b"
+  "nTwoSum a b = Some (x, y) \<Longrightarrow> x = a \<oplus> b"
   by (auto simp: nTwoSum_def Let_def TwoSum_correct1 split: split_if_asm)
 
 lemma nTwoSum_correct2:
   fixes a b x y :: float
   assumes "Finite a"
   assumes "Finite b"
-  assumes "Finite (a + b)"
+  assumes "Finite (a \<oplus> b)"
   assumes out: "nTwoSum a b = Some (x, y)"
   shows "Val a + Val b = Val x + Val y"
   using out
