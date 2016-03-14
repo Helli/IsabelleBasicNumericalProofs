@@ -137,7 +137,7 @@ We compare the speed of TwoSumIf and TwoSum in section ...
 In the literature, the algorithms are presented in an imperative language, with the float expansion stored in an array-like structure. However, the "random-access" (TODO) features are not used: only standard sorted traversal is performed. Thus, there is the easy possibility to use the HOL
 %list
 instead. List traversal can be performed by foldl or foldr, possibly benefiting from compiler optimization. For clarification, we provide some algorithms in a recursive style instead, see section compress.We choose to store the components of largest magnitudes in the lists initial components as they can be accessed very easily.
-
+%
 \subsection{Strategy}
 
 The general idea of the presented algorithms is to provide a way of performing error-free computations (within a finite subset of the rational numbers), while still making use of the accelerated hardware operations of IEEE-floats (affected by rounding after each step). This is done by keeping a "record" of all the errors made and storing them in a list alongside the approximation. Through clever cancellation of accumulated errors and removing the resulting zero-components, this list's length can be kept at a moderate level.

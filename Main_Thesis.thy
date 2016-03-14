@@ -664,7 +664,7 @@ text\<open>To drop the additional negation step, we could instead perform:\<clos
     y = a\<^sub>r \<oplus> b\<^sub>r
     in (x, y))"
 
-text\<open>according to Shewchuk@{cite "Shewchuk"}. Note that we still need a \<open>+\<close> on the right side of the equation:\<close>
+text\<open>according to Shewchuk@{cite "Shewchuk"}. Note that we still have a \<open>+\<close> on the right side of the equation:\<close>
 
 lemma TwoDiff_correct2:
   fixes a b x y :: float
@@ -673,9 +673,9 @@ lemma TwoDiff_correct2:
   assumes "Finite (a \<ominus> b)"
   assumes out: "(x, y) = TwoDiff a b"
   shows "Val a - Val b = Val x + Val y"
-  sorry
+  oops
 
-text\<open>To not further increase the amount of unproven lemmas, we drop this optimization for this thesis.\<close>
+text\<open>Furthermore, Dekker@{cite dekker} shows that in some situations, a sequence of three operations suffices. In order to not further increase the amount of unproven lemmas (or complicate them), we drop this optimization and the @{const TwoDiff} sequence for this thesis. This keeps the possibilities for errors at a minimum.\<close>
 
 section\<open>Code Analysis\<close>
 text\<open>The new data format is designed to implement the idea of storing all the errors as an unevaluated sum. It is defined as follows:\<close>
