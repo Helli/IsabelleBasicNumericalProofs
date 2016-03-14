@@ -49,8 +49,7 @@ Temporary Items
 test.sml
 
 # document output
-output/
-output/document.pdf
+output/hellauerthesis
 thesis/snippets.tex
 thesis/thesis.aux
 thesis/thesis.log
