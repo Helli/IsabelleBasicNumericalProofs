@@ -15,7 +15,7 @@ declare fma_float_def [code del]
 
 --\<open>This definition might not work in all special cases, consider
 
-value [code] "fma_float Plus_zero (float_neg Plus_zero) (float_neg Plus_zero)"
+\<open>value [code] "fma_float Plus_zero (float_neg Plus_zero) (float_neg Plus_zero)"\<close>
 
 However, it should suffice for our purposes.\<close>
 (*ToDo: ML? *)

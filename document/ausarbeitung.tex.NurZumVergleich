@@ -1,0 +1,60 @@
+\documentclass[11pt,a4paper,bibtotoc,idxtotoc,BCOR15mm,DIV10]{scrbook}
+
+% set title, authors and stuff for the cover
+\def\doctype{Bachelor's Thesis in Informatics}
+\def\title{Multiple Precision Floating Point Arithmetic in Isabelle/HOL}
+\def\titleEng{Multiple Precision Floating Point Arithmetic in Isabelle/HOL}
+\def\author{Fabian Hellauer}
+\def\date{March 15, 2016}
+
+
+\usepackage{ausarbeitung}
+
+\begin{document}
+
+\frontmatter
+
+\include{cover}
+
+\clearemptydoublepage
+\include{titlepage}
+
+\clearemptydoublepage
+\include{disclaimer}
+
+\clearemptydoublepage
+\include{abstract}
+
+\clearemptydoublepage
+\tableofcontents
+
+\mainmatter
+
+\include{motivation}
+
+\include{requirements}
+
+\include{uebersetzungen}
+
+\include{implementierung}
+
+\include{usecases}
+
+\include{verifikation}
+
+\include{schluss}
+
+\clearemptydoublepage
+
+\appendix
+  
+\include{installation_bedienung}
+
+\include{verifikation_sources}
+
+\clearemptydoublepage
+
+\bibliography{ausarbeitung}
+\bibliographystyle{alpha}
+
+\end{document}

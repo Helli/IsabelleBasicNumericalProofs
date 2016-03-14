@@ -1,5 +1,25 @@
-\documentclass[11pt,a4paper]{article}
+\documentclass[11pt,a4paper,bibtotoc,idxtotoc,BCOR15mm,DIV10]{scrbook}
+\usepackage[utf8]{inputenc}
+%\usepackage[T1]{fontenc}
+%\usepackage{listings}
+%\usepackage{amsmath}
+%\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{tumlogo}
 \usepackage{isabelle,isabellesym}
+
+\usepackage{ifthen}
+\newcommand{\clearemptydoublepage}{
+  \ifthenelse{\boolean{@twoside}}{\newpage{\pagestyle{empty}\cleardoublepage}}
+  {\clearpage}}
+\renewcommand{\bf}{\normalfont \bfseries}
+% set title, authors and stuff for the cover
+\def\doctype{Bachelor's Thesis in Informatics}
+\def\title{Multiple Precision Floating Point Arithmetic in Isabelle/HOL}
+\def\titleEng{Multiple Precision Floating Point Arithmetic in Isabelle/HOL}
+\def\author{Fabian Hellauer}
+\def\date{March 15, 2016}
+
 
 % further packages required for unusual symbols (see also
 % isabellesym.sty), use only when needed
@@ -32,15 +52,49 @@
 % for uniform font size
 %\renewcommand{\isastyle}{\isastyleminor}
 
-\newcommand{\repeatisanl}[1]
-{\ifnum#1=0\else\isanewline\repeatisanl{\numexpr#1-1}\fi}
-\newcommand{\snip}[4]{\repeatisanl#2#4\repeatisanl#3}
 
 \begin{document}
 
-\title{Snippet definitions}
-\author{Fabian Hellauer}
-\maketitle
+\frontmatter
+
+\include{cover}
+
+\clearemptydoublepage
+\include{titlepage}
+
+\clearemptydoublepage
+\include{disclaimer}
+
+\clearemptydoublepage
+\addcontentsline{toc}{chapter}{Abstract}
+
+\vspace*{2cm}
+\begin{center}
+{\Large \bf Abstract}
+\end{center}
+\vspace{1cm}
+Many problems in geometry or topology systems can only be approximated by large computations with long sequences of operations. To best benefit from the speedup of machine computation, one has to make use of the hardware floating point instructions that are specified by the "Institute of Electrical and Electronics Engineers" (IEEE) 754 standard\cite{IEEE}. However, using the IEEE-floats directly would often create the need for a complicated numerical analysis due to them being affected by round-off.
+Another one of their properties removes this need however: Alongside the result, the round-off error of an addition or subtraction can be computed. Storing and using it in further operations thus makes the computation error-free.
+We give a simple data format in Isabelle/HOL
+\cite{NipkowPaulsonWenzel}
+that uses this approach to provide fast algorithms for error-free addition, subtraction and multiplication.
+
+\clearemptydoublepage
+\addcontentsline{toc}{chapter}{Acknowledgments}
+
+\vspace*{2cm}
+\begin{center}
+{\Large \bf Acknowledgments}
+\end{center}
+\vspace{1cm}
+Fabian Immler provided a highly professional guidance and an incredible amount of support. His versatility for providing solutions in different aspects of scientific work inspired me to invest much time and energy aiming for a deeper understanding of automated theorem proving.
+
+Tobias Nipkow's lectures taught me concepts of functional programming and motivated me to take the course in Semantics and apply for a bachelor's thesis to his research group.
+
+\clearemptydoublepage
+\tableofcontents
+
+\mainmatter
 
 % sane default for proof documents
 \parindent 0pt\parskip 0.5ex
@@ -49,8 +103,9 @@
 \input{session}
 
 % optional bibliography
-%\bibliographystyle{abbrv}
-%\bibliography{root}
+\bibliographystyle{abbrv}
+% Kuerzel: \bibliographystyle{alpha}
+\bibliography{root}
 
 \end{document}
 

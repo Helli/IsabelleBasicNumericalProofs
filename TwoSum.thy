@@ -121,9 +121,9 @@ next
   show ?thesis sorry
 qed
 
-subsection \<open>regular and safe_bound\<close>
+subsection \<open>regular and @{text safe_bound}\<close>
 
---\<open>Ensure that the multiplication in safe_bound is exact.
+--\<open>Ensure that the multiplication in @{text safe_bound} is exact.
   ToDo: find a more sensible constraint using fracwidth\<close>
 fun length_ok :: "float list \<Rightarrow> bool" where
   "length_ok [] = True" |
@@ -137,7 +137,7 @@ fun regular :: "float list \<Rightarrow> bool" where
   "regular (a # as) \<longleftrightarrow> Finite a \<and> list_all (\<lambda>y. float_abs y \<le> ulp_float a) as
     \<and> length_ok (a # as)"
 
---\<open>safe_bound, when applied to a regular multiple precision float x (e.g. as produced by vecSum),
+--\<open>@{text safe_bound}, when applied to a regular multiple precision float x (e.g. as produced by vecSum),
 gives a pair (v, b), such that x represents a value in v + [-b; b]\<close>
 fun safe_bound :: "float list \<Rightarrow> float \<times> float" where
   "safe_bound [] = (Plus_zero, Plus_zero)" |

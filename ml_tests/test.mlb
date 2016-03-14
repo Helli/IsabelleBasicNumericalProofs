@@ -1,7 +1,0 @@
-(* import libraries *)
-$(SML_LIB)/basis/basis.mlb
-
-(* program files *)
-unsynchronized.sml (* just for STORE *)
-test.sml
-test_main.sml

@@ -1,7 +1,7 @@
 theory MPF
 imports
-  VecSum_tests
   "$AFP/IEEE_Floating_Point/FloatProperty"
+  "$AFP/IEEE_Floating_Point/Code_Float"
   "~~/src/HOL/Library/Monad_Syntax"
 begin
 
@@ -106,11 +106,8 @@ lemma nTwoSum_correct2:
   using out
   by (auto intro!: TwoSum_correct2 assms simp: nTwoSum_def Let_def split: split_if_asm)
 
-(*Todo: try proofs below with fun here, or just use approx and errors
-instead of fst, snd and let*)
 definition "IsZero_mpf mpf \<longleftrightarrow> Iszero (approx mpf) \<and> errors mpf = []"
 definition "Val_mpf x = (let (a, es) = x in Val a + listsum (map Val es))"
---\<open>sophisticated methods using Float.float might be faster\<close>
 definition "Finite_mpf mpf \<longleftrightarrow> Finite (fst mpf) \<and> list_all Finite (snd mpf)"
 
 fun valid :: "mpf \<Rightarrow> bool" where
@@ -154,18 +151,6 @@ fun ngrow_mpf_slow :: "mpf \<Rightarrow> float \<Rightarrow> mpf option" where
 
 
 lemmas ngrow_mpf_slow_induct = ngrow_mpf_slow.induct[case_names no_error in_between]
-
-lemma ngrow_mpf_correct:
-  assumes "ngrow_mpf_slow mpf x = Some r"
-  assumes "Finite x" "Finite_mpf mpf"
-  shows preserve_finite: "Finite_mpf r"
-    and preserve_val: "Val_mpf r = Val_mpf mpf + Val x"
-  unfolding atomize_conj
-using assms
-proof (induction mpf x arbitrary: r rule: ngrow_mpf_slow_induct)
-  case (no_error a f)
-  show finite: ?case
-    oops
 
 
 lemma preserve_finite:
@@ -254,9 +239,6 @@ case (2 a e es f r_full)
     using 2 Val_mpf_def goal1 rec_finite by auto
 qed
 
-text \<open>TODO: merge @{thm preserve_finite} and @{thm preserve_val}\<close>
-
-
 lemmas ngrow_mpf_correct =
   preserve_finite
   preserve_val
@@ -266,16 +248,6 @@ subsection \<open>MPF operations\<close>
 
 fun mpf_neg :: "mpf \<Rightarrow> mpf" where
   "mpf_neg (a, es) = (float_neg a, map float_neg es)"
-
---\<open>The following operations are correct when their operands are nonoverlapping.
-  in this case, the result is nonoverlapping, too.\<close>
-
-fun grow_mpf_slow :: "mpf \<Rightarrow> float \<Rightarrow> mpf" where
-  "grow_mpf_slow (a, []) f = (let (x, y) = TwoSum f a in (x, [y]))" |
-  "grow_mpf_slow (a, e # es) f = (let
-    (a', es') = grow_mpf_slow (e, es) f;
-    (x, y) = TwoSum a' a
-    in (x, y # es'))"
 
 (* alternative version *)
 fun gm_step :: "float \<Rightarrow> mpf \<Rightarrow> mpf" where
@@ -336,124 +308,5 @@ lemma gm_snoc1: "(grow_mpf (a, es @ [h]) f) = (let
         (a', es') = grow_mpf (a, es) x
        in (a', es' @ [y]))"
        by (induction es arbitrary: a) (simp_all add: case_prod_beta it2)
-
-lemma gm_insert:
-  "grow_mpf (a, es @ (h # hs)) f = (let
-    (a', es') = grow_mpf (h, hs) f;
-    (a'', es'') = grow_mpf (a, es) a'
-    in (a'', es'' @ es'))"
-  apply (induction hs arbitrary: a h f es)
-  apply (metis (no_types, lifting) case_prod_beta grow_mpf.simps grow_mpf_it.simps(1) gm_snoc1 rev.simps(1) split_conv)
-  unfolding g2
-  apply (simp add: prod.case_eq_if it)
-  unfolding it
-  oops
-
-lemma it:
-  "(case grow_mpf_it (rev es @ [e]) f hs of
-     (a', es') \<Rightarrow> case TwoSum a' a of (x, y) \<Rightarrow> (x, y # es')) =
-    (case case grow_mpf_it (rev es) f hs of (a', es') \<Rightarrow> case TwoSum a' e of (x, y) \<Rightarrow> (x, y # es') of
-     (a', es') \<Rightarrow> case TwoSum a' a of (x, y) \<Rightarrow> (x, y # es'))"
-  apply (induction hs arbitrary: a e f es)
-  apply (simp add: prod.case_eq_if)
-  oops
-
-lemma
-  "grow_mpf (a, e # es') f = (let
-    (a', es') = grow_mpf (e, es') f;
-    (x, y) = TwoSum a' a
-    in (x, y # es'))"
-  apply simp
-  apply (induction es' arbitrary: a e f)
-  apply simp
-  apply (simp add: prod.case_eq_if)
-  oops
-
-lemma "let (a', es') = grow_mpf_slow (a, es) f in (a', es' @ hs) = (let
-    (a', es') = grow_mpf_it (rev es) f hs;
-    (x, y) = TwoSum a' a
-    in (x, y # es'))"
-  apply (induction es arbitrary: a f hs)
-  apply simp_all
-  apply (simp add: prod.case_eq_if)
-  apply (simp add: prod.case_eq_if)
-  oops
-
-subsection \<open>Testing\<close>
-
-definition "sehrgross = undefined"
-definition "gross = undefined"
-definition "mittel = undefined"
-definition "klein = undefined"
-definition "sehrklein = undefined"
-definition "test_mpf = (sehrgross, [gross, mittel, klein, sehrklein])"
-
-(* generate unfolded view in "output" *)
-definition "output = grow_mpf_slow test_mpf (float_of 1)"
-lemma "P output" unfolding output_def test_mpf_def grow_mpf_slow.simps
-  apply (clarsimp split: prod.splits) oops
-
-definition "output' = grow_mpf test_mpf (float_of 1)"
-lemma "P output'" unfolding output'_def test_mpf_def grow_mpf.simps grow_mpf_it.simps
-  apply (clarsimp split: prod.splits) oops
-
-value "approx output'"
-
-fun build_mpf :: "float list \<Rightarrow> mpf" where
-  "build_mpf [] = undefined" |
-  "build_mpf (f # fs) = foldl grow_mpf (f,[]) fs"
-
-fun nbuild_mpf :: "float list \<Rightarrow> mpf option" where
-  "nbuild_mpf [] = undefined" |
-  "nbuild_mpf [f] = Some (f, [])" |
-  "nbuild_mpf (f # fs) = do {
-    a \<leftarrow> nbuild_mpf fs;
-    ngrow_mpf_slow a f
-  }"
-
-fun it_mpf_transform :: "mpf \<Rightarrow> float list \<Rightarrow> mpf" where
-  "it_mpf_transform (a, []) bs = (a, rev bs)" |
-  "it_mpf_transform (a, (v#vs)) bs = (let (s, e) = twoSum (a, v)
-    in it_mpf_transform (s, vs) (e # bs))"
-
-fun mpf_transform :: "mpf \<Rightarrow> mpf" where
-  "mpf_transform x = it_mpf_transform x []"
-
-(* ToDos *)
-(*
-fun mpf_eq :: "mpf \<Rightarrow> mpf \<Rightarrow> bool" where
-  "mpf_eq a b \<longleftrightarrow> (let diff = mpf_add a (mpf_neg b)
-    in IsZero_mpf diff)"
-
-lemma "Val_mpf (build_mpf fs) = listsum (map Val fs)"
-*)
-definition "list = l1"
-
-value "list"
-value [code] "toNF (fold op+ (tl list) (hd list))"
-value [code] "listsum (map toNF list)"
-value [code] "map toNF (let
-  mpf = (hd list, tl list);
-  (a, es) = mpf_transform mpf in
-  a # es)"
-value [code] "map toNF (vecSum list)"
-value [code] "let
-  mpf = (hd list, tl list);
-  (a, es) = mpf_transform mpf in
-  map toNF (a # es)"
-value [code] "map toNF (vecSum list)"
-value [code] "let
-  mpf = (hd list, tl list);
-  (a, es) = mpf_transform mpf in
-  map toNF (a # es @ vecSum list)"
-
-ML \<open>val test_ml = @{code ngrow_mpf_slow}\<close>
-
---\<open>Beware of the inexact representation\<close>
-ML \<open>val timing_test_ml = @{code timing_test}\<close>
-ML \<open>val grow_mpf_ml = @{code ngrow_mpf_slow}\<close>
-ML \<open>val test =  flat (replicate 100 [12.324245, 234.234, 12.234, 2345.0345])\<close>
-ML \<open>grow_mpf_ml (4.34,test) 5664.34\<close>
-ML \<open>timing_test_ml ()\<close>
 
 end
