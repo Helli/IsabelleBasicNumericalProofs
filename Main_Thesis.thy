@@ -16,16 +16,17 @@ paragraph\<open>Dealing with round-off\<close>
 text\<open>If round-off affected arithmetic is used in a long sequence of operations, the result will only approximate within a certain range. Correctness proofs for assertions to this range will require a tedious numerical analysis of the algorithms which is very complex to do formally.\<close>
 paragraph\<open>Avoiding round-off\<close>
 text\<open>Another approach is to avoid round-off altogether. However, using an implementation of infinitely precise rationals might severely slow down the code's execution due to them not making use of hardware floating point operations that modern machines provide.\<close>
-paragraph\<open>Float expansions\<close>
-text\<open>If a finite set of numbers with magnitude and precision in the range of IEEE floats suffices however, both the precision and fast execution speed can be preserved: This thesis presents the "float expansion" approach, where the accumulated errors are stored in a list alongside with an approximation for the result of the executed sequence. It provides addition, subtraction and multiplication within the numbers representable in this way (a finite superset to IEEE floats).\<close>
+paragraph\<open>Floating Point expansions\<close>
+text\<open>The goal of the "floating point expansion" approach is to combine the fast execution of IEEE floats with an error-free arithmetic. The idea is to execute the round-affected operations and compute the errors alongside to make the exact result available. The accumulated errors are stored alongside with the IEEE approximation for the result. Error-free addition, subtraction and multiplication can be provided within the numbers representable in this way (a finite superset to IEEE floats).\<close>
 
 section\<open>Problem statement\<close>
-text\<open>Isabelle@{cite NipkowPaulsonWenzel} already provides the arbitrary precision format @{typ real} in its @{theory Complex_Main} library. The widely popular "IEEE-floats"@{cite IEEE} are modelled in an Isabelle theory \<open>IEEE_Floating_Point/IEEE\<close>@{cite "IEEE_Floating_Point-AFP"} provided by the "Archive of Formal Proofs" (AFP).
+text\<open>Isabelle@{cite NipkowPaulsonWenzel} already provides the arbitrary precision format @{typ real} in its @{theory Complex_Main} library. The widely popular "IEEE-floats"@{cite IEEE} are modelled in an Isabelle theory \<open>IEEE_Floating_Point/IEEE\<close> available at the "Archive of Formal Proofs" (AFP)@{cite "IEEE_Floating_Point-AFP"}.
 
-The task for this bachelor thesis is to use this formalization to present a "multiple precision" float arithmetic in Isabelle/HOL. In several scientific papers this is described as "floating point expansion"@{cite priest}@{cite mioara} or "multiple term"@{cite mioara} strategy. It is an easy way to gain considerable amounts of precision while still using the IEEE floating point specification to enable the widely available acceleration of hardware operations.\<close>
+The task for this bachelor thesis is to use this formalization and ideas from the literature to present a "multiple precision float arithmetic" in Isabelle/HOL. This corresponds to the "floating point expansion" approach explained above, where many ideas for such formats have been proposed. It is sometimes called "multiple term"@{cite mioara} strategy, but most authors use a term involving "expansion"@{cite priest}@{cite "Shewchuk"}.\<close>
 
 section\<open>Contributions\<close>
-text\<open>We explain different aspects of the "floating point expansion" approach and then provide the data format @{text mpf}, which stands for "multiple precision float". It implements error-free addition, subtraction and multiplication within the numbers representable in this format (a finite superset to IEEE floats).
+text\<open>We explain different aspects of the "floating point expansion" approach and then provide the data format @{text mpf}, which stands for "multiple precision float". A @{text mpf} can represent the full range of IEEE floats at their maximum precision, as opposed to floats themselves, where magnitude and absolute precision depend inversely on each other. We implement error-free addition and subtraction within these numbers.
+
 We use the formal setting of Isabelle/HOL to specify and prove the algorithms correct, but we make sure all of them can easily be executed by adapting Isabelle's Standard ML (SML) code generation for IEEE-floats.
 \<close>
 
@@ -1295,7 +1296,7 @@ We give a more practice-oriented analysis of Shewchuk's algorithms and offer exp
 Based on the existing formalization of IEEE-floats, we then specified a data format to provide an easy access to these algorithms. This means that users have a new option for a number format to perform verified computations using fast and error-free addition and subtraction. As results of our thorough testing of generated code, an error in polyML's float handling has been detected and removed. This means the code generated using the AFP-theory @{text \<open>IEEE_Floating_Point/Code_Float\<close>} has now a clearer semantics.\<close>
 
 section\<open>Future Work\<close>
-text\<open>A correctness proof for the @{const TwoSum} method needs to be converted to Isabelle's IEEE754 formalization. This will then also enable proofs for Shewchuk's "nonoverlapping" property, which, when implemented, allows more assertions about float expansions to be formally verified, e.g. about the maximum length of a valid @{typ mpf}, or the quality of the approximation stored in the first component.
+text\<open>A correctness proof for the @{const TwoSum} method needs to be converted to Isabelle's IEEE754 formalization. This will then also enable proofs for Shewchuk's "nonoverlapping" property, which, when implemented, allows more assertions about multiple precision float arithmetic to be formally verified, e.g. about the maximum length of a valid @{typ mpf}, or the quality of the approximation stored in the first component.
 Another improvement could be made by adapting code generation for IEEE-floats to support more of Isabelle's target languages. This will make our arithmetic library more flexible for use in languages than SML. However, the correct behaviour of floats in the language should be ensured beforehand, to avoid getting wrong results when using the generated code.\<close>
 
 (*<*)

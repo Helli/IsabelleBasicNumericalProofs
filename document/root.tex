@@ -73,11 +73,11 @@
 {\Large \bf Abstract}
 \end{center}
 \vspace{1cm}
-Many problems in geometry or topology systems can only be approximated by large computations with long sequences of operations. To best benefit from the speedup of machine computation, one has to make use of the hardware floating point instructions that are specified by the "Institute of Electrical and Electronics Engineers" (IEEE) 754 standard\cite{IEEE}. However, using the IEEE-floats directly would often create the need for a complicated numerical analysis due to them being affected by round-off.
-Another one of their properties removes this need however: Alongside the result, the round-off error of an addition or subtraction can be computed. Storing and using it in further operations thus makes the computation error-free.
+Many problems, e.g. in geometry or topology systems, need large computations with long sequences of arithmetic operations to be solved. Machine computation using hardware floating point instructions, like the one specified by the "Institute of Electrical and Electronics Engineers" (IEEE) 754 standard\cite{IEEE},  can offer a huge speedup. However, using the IEEE-floats directly would often create the need for a complicated numerical analysis due to them being affected by round-off.
+However, this downside can be removed at the cost of a few extra instructions: Alongside the result, the round-off error of an addition or subtraction can be computed. Storing and using it in further operations thus makes the computation error-free.
 We give a simple data format in Isabelle/HOL
 \cite{NipkowPaulsonWenzel}
-that uses this approach to provide fast algorithms for error-free addition, subtraction and multiplication.
+that uses this approach to provide fast algorithms for error-free addition and subtraction.
 
 \clearemptydoublepage
 \addcontentsline{toc}{chapter}{Acknowledgments}
