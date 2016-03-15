@@ -143,53 +143,13 @@ instead. List traversal can be performed by foldl or foldr, possibly benefiting 
 The general idea of the presented algorithms is to provide a way of performing error-free computations (within a finite subset of the rational numbers), while still making use of the accelerated hardware operations of IEEE-floats (affected by rounding after each step). This is done by keeping a "record" of all the errors made and storing them in a list alongside the approximation. Through clever cancellation of accumulated errors and removing the resulting zero-components, this list's length can be kept at a moderate level.
 A key component in being able to record the errors made upto a point is the TwoSum method first described by (first autor), possibly used earlier. A Central realisation is that for IEEE floating point numbers representing finites, as long as the result of a plus (or minus) operation does not lie outside the representable interval, the error of this calculation can be represented and even computed using again only float-addition and subtraction.
 
-\subsection{Generality}
-
-Only the two defining properties (lemma best-approx and val-preserve) of the TwoSum-method are needed for the mpfs properties of error-free computation. Any software or hardware format that enables such a possibility to add two values and "record" the precise error is in principle suited for error-free computations using these recursive algorithms. Additional lemmas about the format like exact rounding will be needed to make use of Shewchuk's "nonoverlapping" property that he proves to be preserverved by them in (bibtex). Since this property is needed to make assertions about the first components approximation quality (or the maximum expansion length as discussed in sect...), these cannot be provided as HOL-facts yet.
-
-\section{Code Generation}
-To profit from the accelerated execution of hardwired float operations, the HOL-code needs to be translated into a compilable language. To this end, Isabelle provides the
-%export_code
-command. It uses the 
-% code printing
-statements of the current context. However, due to such conversions being prone to introducing errors, only safe translations are being used by default, i.e. those that preserve the HOL-statements with high certainty. Thus, to enable the generation for hardware float using code, some additional translations need to be added. These should be tested thoroughly to ensure the resulting ML code's correctness.
 
 Sie musste außerdem erweitert werden, um die Ausgabe des generierten Codes anzuzeigen und um die Überprüfungen auf Überlauf durchführen zu können.
 
 % Stil im Titel
 \subsection{Testing SML's "real" type}
 
-In SML the IEEE-floats are called
-% ML_real
-and use hardware operations by default. Thus, the translation
-% snippethier:
-% code_printing type_constructor float
-%  (SML) "real" and (OCaml) "float"
-
-from
-%theory Code_Float (bibtex)
- 
-immediately suggests itself. When executing the in section     presented methods however, it turned out that the output was obviously wrong. Tracing this problem back to individual code blocks lead to the conclusion that already the
-% constTwoSum
-method delivered wrong results: The sum of the two input values did not match the sum of the two output values. Luckily, the error was so large that it was not overcast by the inexact representation as rounded sequence in base 10.
-% BeispielIsa2015
-This problem with the translated code turned out to stem from an unexpected computation of intermediate results in the "double extended" precision (bibtex IEEE section 3.7). The ML-code used it on some systems and thus computed the error value e as the error how it would be for an addition in extended precision. As this result needed to be translated into the 64-bit format for further usage, it needed to be rounded again at the end of the method. The error of this conversion is not accommodated for in the other output value designed to deliver the correctly rounded result of the 64-addition, thus nullifying the property of error-free transformation. The 80-bit registers are used until storage in a 64-bit value is enforced. Our results are thus not determined by the sequence of operations specified in the code, but by hardly controllable circumstances e.g. the way PolyML handles function calls (Fußnote mit Zitat aus David Matthews' erster Antwort). Worse still, due to different instruction sets being used, the correct behavior was depending on the operating system used (Fußnote mit Zitat aus David Matthews' erster Antwort). One way to circumvent these arbitrary changes in the results is to enforce the storage in a 64-bit value after every floating point operation. From this, the approach of the
-% "STORE"-method:
-was derived: The result of every addition or subtraction is written to a ML variable (which uses double precision). This value is then used for next operation. This leads to the correct results, but is very slow in execution as shown in section runtime.
-As another way of avoiding the unpredictable additional precision, the processors could be set to a mode that does not use this unwanted feature. This could be confirmed through compiling the exported TwoSum code with another ML compiler: running mlton with the flag "-codegen amd64" apparently produces a correct executable for TwoSum. It is desirable to make a similar modification to PolyML. This will also make the
-% value
-command use the correct code. Kindly, polyml maintainer David Mathews provided a changed version (link zu github) that should work on most systems to run Isabelle with and agreed to consider the behaviour of floats in future polyml-releases. It works by setting the precision to 64-bit in the control word of every float instruction. The change made it to polyML 5.6 (link zu "I committed a change...") and is thus available in Isabelle2016(link zu release notes).
-
 \subsection {Testing the generated SML code}
-While the issues described in the section before were fixed, other problems in ML's (or another target language's) float handling might still occur. In addition to the computation being possibly incorrect, two more problems hinder the testing possibilities:
-\begin{itemize}
-\item The "value [code]" runs into an error because the translation from the computed \MLreal back into a HOL term is not implemented.
-\item Evaluating it via the ML command only gives the inexact representation as a rounded sequence in base 10.
-\end{itemize}
-To make matters worse, the simplifier can't simulate the float operations in HOL due a lack of lemmas for the very abstract definitions of
-%IEEE.closest
-via an all-quantifier over the \HOLreal type. Thus, we have no way to compute the correct result in our verified setting for a comparison with the SML output.
-
 % TODO: Stil im Titel
 \paragraph {Usage of Float.float}
 
@@ -202,7 +162,7 @@ is the
 %tomanexpdef
 provided by Fabian Immler. It is undefined in HOL. Using this, we can transform IEEE floats to infinitely precise Float.floats and compare the resulting values via their built in
 %constequalfloat
-function. Implicitely, we use the fact that by design, the finite IEEE-floats are a subset of the of the Float.floats. A disadvantage is that we once again rely on the correctness of a SML function. However, the advantage is that we don't have to provide conversion functions for all of Real.real which would be quite complicated. The sign-mantissa-exponent representation, that both float formats share, makes the transformation back just as easy:
+function. Implicitly, we use the fact that by design, the finite IEEE-floats are a subset of the of the Float.floats. A disadvantage is that we once again rely on the correctness of a SML function. However, the advantage is that we don't have to provide conversion functions for all of Real.real which would be quite complicated. The sign-mantissa-exponent representation, that both float formats share, makes the transformation back just as easy:
 % offloatdef
 As desired, a value for mantissa or exponent that does not fit in the SML double float will produce an error during evualtion.
 

@@ -15,9 +15,9 @@ Round-off occurs when the result of a floating-point operation cannot be represe
 paragraph\<open>Dealing with round-off\<close>
 text\<open>If round-off affected arithmetic is used in a long sequence of operations, the result will only approximate within a certain range. Correctness proofs for assertions to this range will require a tedious numerical analysis of the algorithms which is very complex to do formally.\<close>
 paragraph\<open>Avoiding round-off\<close>
-text\<open>Another approach is to avoid round-off altogether. However, using an implementation of infinitely precise rationals might severely slow down the code's execution due to them not making use of hardware floating point operations that modern machines provide.\<close>
+text\<open>Another approach is to avoid round-off altogether. However, using an implementation of infinitely precise rationals might severely slow down the code's execution due to them not making use of the hardware floating point operations that modern machines provide.\<close>
 paragraph\<open>Floating Point expansions\<close>
-text\<open>The goal of the "floating point expansion" approach is to combine the fast execution of IEEE floats with an error-free arithmetic. The idea is to execute the round-affected operations and compute the errors alongside to make the exact result available. The accumulated errors are stored alongside with the IEEE approximation for the result. Error-free addition, subtraction and multiplication can be provided within the numbers representable in this way (a finite superset to IEEE floats).\<close>
+text\<open>The goal of this approach is to combine the fast execution of IEEE floats with an error-free arithmetic. The idea is to execute the round-affected operations and compute the errors alongside to make the exact result available. The accumulated errors are stored alongside with the IEEE approximation for the result. Error-free addition, subtraction and multiplication can be provided within the numbers representable in this way (a finite superset to IEEE floats).\<close>
 
 section\<open>Problem statement\<close>
 text\<open>Isabelle@{cite NipkowPaulsonWenzel} already provides the arbitrary precision format @{typ real} in its @{theory Complex_Main} library. The widely popular "IEEE-floats"@{cite IEEE} are modelled in an Isabelle theory \<open>IEEE_Floating_Point/IEEE\<close> available at the "Archive of Formal Proofs" (AFP)@{cite "IEEE_Floating_Point-AFP"}.
@@ -25,18 +25,19 @@ text\<open>Isabelle@{cite NipkowPaulsonWenzel} already provides the arbitrary pr
 The task for this bachelor thesis is to use this formalization and ideas from the literature to present a "multiple precision float arithmetic" in Isabelle/HOL. This corresponds to the "floating point expansion" approach explained above, where many ideas for such formats have been proposed. It is sometimes called "multiple term"@{cite mioara} strategy, but most authors use a term involving "expansion"@{cite priest}@{cite "Shewchuk"}.\<close>
 
 section\<open>Contributions\<close>
-text\<open>We explain different aspects of the "floating point expansion" approach and then provide the data format @{text mpf}, which stands for "multiple precision float". A @{text mpf} can represent the full range of IEEE floats at their maximum precision, as opposed to floats themselves, where magnitude and absolute precision depend inversely on each other. We implement error-free addition and subtraction within these numbers.
+text\<open>We explain different aspects of the "floating point expansion" approach and provide the data format @{text mpf}, which stands for "multiple precision float". A @{text mpf} can represent the full range of IEEE floats at their maximum precision, as opposed to floats themselves, where magnitude and absolute precision depend inversely on each other. We implement error-free addition and subtraction within these numbers.
 
 We use the formal setting of Isabelle/HOL to specify and prove the algorithms correct, but we make sure all of them can easily be executed by adapting Isabelle's Standard ML (SML) code generation for IEEE-floats.
 \<close>
 
-chapter\<open>Code Analysis\<close>
+chapter\<open>Specification in Isabelle/HOL\<close>
 section\<open>IEEE in Isabelle\<close>
 text\<open>The IEEE standard for floating point arithmetic (IEEE 754-2008)@{cite IEEE} is already modelled in Lei Yu's AFP entry \<open> IEEE_Floating_Point/IEEE\<close>.
-The formalization is quite general to accommodate for the many different allowed formats that arise when different precisions and exponent ranges are combined (the decimal formats are omitted). However, a strong precedence for the "binary64" format and the "roundTiesToEven" rounding mode can be observed. The operations using this format and rounding rule (called \<open>float_format\<close> respectively \<open>To_nearest\<close> in the theory) are wrapped into definitions with simpler names, e.g.\<close>
+The formalization is quite general to accommodate for the many different allowed formats that arise when different bit sizes for mantissa and exponent are combined (the decimal formats are omitted). However, a strong precedence for the "binary64" format and the "roundTiesToEven" rounding mode can be observed. The operations using this format and rounding rule (called \<open>float_format\<close> respectively \<open>To_nearest\<close> in the theory) are wrapped into definitions with simpler names, e.g.\<close>
 text\<open>@{theory_text \<open>
-definition plus_float :: "float \<Rightarrow> float \<Rightarrow> float" where
-"a + b = Abs_float (fadd float_format To_nearest (Rep_float a) (Rep_float b))"
+definition plus_float :: "float \<Rightarrow> float \<Rightarrow> float"
+
+where "a + b = Abs_float (fadd float_format To_nearest (Rep_float a) (Rep_float b))"
 \<close>}\<close>
 text\<open>In the case of the format, this is justifiable by "binary64" being widely popular and hardware-implemented on most systems.
 
@@ -610,9 +611,9 @@ term "a + (b::float)"
 text\<open>outputs\<close>
 text\<open>\<open>"a \<oplus> b" :: "IEEE.float"\<close>\<close>
 
-section\<open>Making operations error-free\<close>
+section\<open>Expanding basic operations\<close>
 text\<open>
-The core idea is to provide an error-free form of the basic operations between IEEE floats. Since we want the output to be floats as well, and rounding occurs for almost all input values, the only way to do so is to use the round-affected IEEE operation and then computing the error, also represented as floats. For the basic operations, this will turn out to be exactly another float.\<close>
+The core idea is to provide an error-free form of the basic operations between IEEE-floats. Since we want the output to be floats as well, and rounding occurs for almost all input value pairs, the only way to do so is to use the round-affected IEEE operation and then computing the error, also represented as floats. For the basic operations, this will turn out to be exactly another IEEE-float.\<close>
 
 subsection\<open>Addition\<close>
 text\<open>We compute \<open>a \<oplus> b\<close> together with \<open>y\<close> the error value. \<open>y\<close> will have the sign \<open>-\<close> or \<open>+\<close> corresponding to whether \<open>a \<oplus> b\<close> is above resp. below the exact mathematical result of \<open>a + b\<close>. It can be computed by the following sequence, first described by Ole Møller in 1965@{cite moller}:\<close>
@@ -665,7 +666,7 @@ text\<open>To drop the additional negation step, we could instead perform:\<clos
     y = a\<^sub>r \<oplus> b\<^sub>r
     in (x, y))"
 
-text\<open>according to Shewchuk@{cite "Shewchuk"}. Note that we still have a \<open>+\<close> on the right side of the equation:\<close>
+text\<open>according to Shewchuk@{cite "Shewchuk"}. Note that we still have a \<open>+\<close> on the right side of the equation to make the "unevaluated sum approach" work:\<close>
 
 lemma TwoDiff_correct2:
   fixes a b x y :: float
@@ -676,9 +677,12 @@ lemma TwoDiff_correct2:
   shows "Val a - Val b = Val x + Val y"
   oops
 
-text\<open>Furthermore, Dekker@{cite dekker} shows that in some situations, a sequence of three operations suffices. In order to not further increase the amount of unproven lemmas (or complicate them), we drop this optimization and the @{const TwoDiff} sequence for this thesis. This keeps the possibilities for errors at a minimum.\<close>
+subsection\<open>Optimizations\<close>
+text\<open>Dekker@{cite dekker} shows that in some situations, sequences of three operations suffice for \<open>+\<close> and \<open>-\<close>. In order to not further increase the amount of unproven lemmas (or complicate them), we drop this optimization and the @{const TwoDiff'} sequence for this thesis. This keeps the possibilities for errors at a minimum.\<close>
 
-section\<open>Code Analysis\<close>
+
+
+section\<open>MPF definitions\<close>
 text\<open>The new data format is designed to implement the idea of storing all the errors as an unevaluated sum. It is defined as follows:\<close>
 --\<open>Define the "Multiple Precision Float"\<close>
 type_synonym mpf = "float \<times> float list"
@@ -741,11 +745,18 @@ lemma TwoDiff_correct1: "TwoDiff a b = (x, y) \<Longrightarrow> x = a \<ominus> 
   by (auto simp: TwoDiff_def Let_def)
 
 *)
+
+section\<open>Using the option monad\<close>
+
+text\<open>We embed @{const TwoSum} to make sure overflow will be noticed:\<close>
+
 definition "safe_TwoSum a b =
   (let r = TwoSum a b in
     if Finite (fst r) \<and> Finite (snd r)
     then Some r
     else None)"
+
+text\<open>The same for {const TwoDiff}:\<close>
 
 definition "safe_TwoDiff a b =
   (let r = TwoDiff a b in
@@ -753,6 +764,7 @@ definition "safe_TwoDiff a b =
     then Some r
     else None)"
 
+text\<open>If a value is returned, both output values are real numbers:\<close>
 
 lemma safe_TwoSum_finite:
   assumes "safe_TwoSum a b = Some (s, e)"
@@ -760,6 +772,8 @@ lemma safe_TwoSum_finite:
   and safe_TwoSum_finite2: "Finite e"
   using assms
   by (auto simp: safe_TwoSum_def Let_def split: split_if_asm)
+
+text\<open>The @{const TwoSum} lemmas can now be expressed like this:\<close>
 
 lemma safe_TwoSum_correct1:
   "safe_TwoSum a b = Some (x, y) \<Longrightarrow> x = a \<oplus> b"
@@ -792,22 +806,12 @@ lemma safe_TwoDiff_correct2:
   using assms
 by (auto intro!: TwoDiff_correct2 simp: safe_TwoDiff_def Let_def split: split_if_asm)
 *)
-definition "IsZero_mpf mpf \<longleftrightarrow> Iszero (approx mpf) \<and> errors mpf = []"
+text\<open>The lemmas can be easily transposed for @{const TwoDiff} (not shown here).\<close>
 
-lemma float_distinct_10: "\<not> (Isnormal f \<and> Iszero f)"
-  by (auto simp add: float_defs is_normal_def is_zero_def)
+section\<open>Grow-mpf\<close>
 
-lemma valid_no_zero_components: "valid (a, es) \<Longrightarrow> list_all (\<lambda>f. \<not>Iszero f) es"
-  apply (simp split: bool.splits)
-  apply (induction es)
-  using float_distinct(9) float_distinct_10
-  apply auto
-  done
-
-lemma rec_val: "Val_mpf (a, e # es) = Val a + Val_mpf (e, es)"
-  by simp
-lemma rec_finite: "Finite_mpf (a, e # es) \<longleftrightarrow> Finite a \<and> Finite_mpf (e, es)"
-  by simp
+text\<open>Remeber that our mpf is sorted by decreasing magnitude. When adding a single float value to an mpf, we need to propagate changes through the whole list to preserve the ordering, outputting the larger values to the head. We use Shewchuk's algorithm (grow-expansion@{cite Shewchuk}) to add a single float value to an mpf, using only the error-free transformations via @{const safe_TwoSum}. As his research shows, starting this transformation at the values with low magnitude increases the quality of the approximation (which is the component with highest magnitude).
+For our mpfs (that work with lists instead of arrays), this means we start at the tail:\<close>
 
 fun safe_grow_mpf_rec :: "mpf \<Rightarrow> float \<Rightarrow> mpf option" where
   "safe_grow_mpf_rec (a, []) f =
@@ -821,6 +825,18 @@ fun safe_grow_mpf_rec :: "mpf \<Rightarrow> float \<Rightarrow> mpf option" wher
       (x, y) \<leftarrow> safe_TwoSum a' a;
       Some (x, y # es')
     }"
+
+text\<open>To demonstrate the @{const TwoSum} sequence carried out by grow-mpf, we use the following graphic:\<close>
+text_raw\<open>
+  \vspace{0mm}
+
+  \begin{figure}[h!]
+    \centering
+    \includegraphics[width=13cm]{fabi}
+    \caption[Bildunterschrift]{The float @{text \<open>f\<close>} is added to the mpf (@{text \<open>a\<close>}, @{text \<open>es\<close>}). TwoSum is represented by a box where the larger value, @{text \<open>x\<close>}, is output to the left side and the smaller one, @{text \<open>y\<close>}, to the bottom. On the top, the function call is passed on. The returned mpf (bottom) is built from right to left.}
+  \end{figure}
+\<close>
+
 text\<open>At this point, we could implement the zero removal explained before, by modifying the last lines of the blocks:\<close>
 
 fun safe_grow_mpf_rec_no_0 :: "mpf \<Rightarrow> float \<Rightarrow> mpf option" where
@@ -835,10 +851,20 @@ fun safe_grow_mpf_rec_no_0 :: "mpf \<Rightarrow> float \<Rightarrow> mpf option"
       (x, y) \<leftarrow> safe_TwoSum a' a;
       if Iszero y then Some (x, es') else Some (x, y # es')
     }"
-text\<open>However, we don't pursue this idea further due to the problems mentioned there.\<close>
+text\<open>However, we don't pursue this idea further due to the mentioned problems.\<close>
 
-text\<open>We rename the induction cases:\<close>
+text\<open>We rename the induction cases, to stress the fact that in the induction step, a value is inserted at position 2 of the non-empty list:\<close>
 lemmas safe_grow_mpf_induct = safe_grow_mpf_rec.induct[case_names no_error in_between]
+
+subsection\<open>Preserving Properties\<close>
+
+text\<open>Since @{const safe_TwoSum} returns @{const None} for non-finite floats, @{prop "safe_grow_mpf_rec mpf x = Some r"} is a very strong assertion. We can use this to prove an important property of grow-mpf:\<close> 
+
+text\<open>First, we need a recursive version of our predicate:\<close>
+lemma rec_finite: "Finite_mpf (a, e # es) \<longleftrightarrow> Finite a \<and> Finite_mpf (e, es)"
+  by simp
+
+text\<open>Now, onto the main proof:\<close>
 
 lemma preserve_finite:
   assumes "safe_grow_mpf_rec mpf x = Some r"
@@ -861,6 +887,7 @@ from no_error.prems(1) have "do {(x, y) \<leftarrow> safe_TwoSum f a; Some (x, [
     by simp
 next
 case (in_between a e es f r_full)
+--\<open>This case is similar except that we need to prove more floats to be finite\<close>
   note "in_between.prems"(1)[simplified, unfolded bind_eq_Some_conv, simplified]
   then obtain l r where goal1: "safe_grow_mpf_rec (e, es) f = Some (l, r)"
     and r1: "do {(x, y) \<leftarrow> safe_TwoSum l a; Some (x, y # r)} = Some r_full"
@@ -884,9 +911,16 @@ text\<open>Notice that the "assignments"(@{text \<leftarrow>}) in a Monad like @
 text\<open>@{text "do {(x, y) \<leftarrow> safe_TwoSum l a; Some (x, y # r)}"}\<close>
 text\<open>becomes\<close>
 text\<open>@{term "do {(x, y) \<leftarrow> safe_TwoSum l a; Some (x, y # r)}"}\<close>
-text \<open>etc. We perform the next proof using this style:\<close>
+text \<open>etc. We perform the next proof using this style.
 
-lemma preserve_val:
+Again, we first need to prove a function to be equivalent to a recursive version:\<close>
+
+lemma rec_val: "Val_mpf (a, e # es) = Val a + Val_mpf (e, es)"
+  by simp
+
+text\<open>Now, we're good to go:\<close>
+
+theorem preserve_val:
   assumes "safe_grow_mpf_rec mpf x = Some r"
   assumes "Finite x" "Finite_mpf mpf"
   shows "Val_mpf r = Val_mpf mpf + Val x"
@@ -960,7 +994,7 @@ fun grow_mpf_it :: "float list \<Rightarrow> float \<Rightarrow> float list \<Ri
     (x, y) = TwoSum f e
     in grow_mpf_it es x (y # hs))"
 
-text\<open>This transformation was comparably easy because grow-mpf only needs one linear pass as the graphic shows.\<close>
+text\<open>This transformation was comparably easy because grow-mpf only needs one linear pass as the graphic has shown.\<close>
 
 fun grow_mpf_tr :: "mpf \<Rightarrow> float \<Rightarrow> mpf" where
   "grow_mpf_tr (a, es) f = (let
@@ -977,6 +1011,9 @@ fun grow_mpf_step :: "float \<Rightarrow> mpf \<Rightarrow> mpf" where
 
 fun grow_by_fold :: "mpf \<Rightarrow> float \<Rightarrow> mpf" where
   "grow_by_fold (a, es) f = foldr grow_mpf_step (a # es) (f, [])"
+
+
+text\<open>We expect compilers that optimize tail recursion to also optimize @{const foldr}. Thus, it is no longer necessary to make the functions tail recursive if they can be expressed by fold.\<close>
 
 text \<open>We prepare an equivalence proof for @{const grow_mpf_tr} and @{const grow_by_fold} by providing some lemmas about @{const grow_mpf_tr} and @{const append}.\<close>
 
@@ -1026,26 +1063,23 @@ lemma gm_snoc1: "(grow_mpf_tr (a, es @ [h]) f) = (let
        in (a', es' @ [y]))"
        by (induction es arbitrary: a) (simp_all add: case_prod_beta grow_it_append_expansion)
 
-(* todo *)
-text\<open>We expect compilers that optimize tail recursion to also optimize @{const foldr}. Thus, it is no longer necessary to make the functions tail recursive if they can be expressed by fold.\<close>
 
-section\<open>Further Operations\<close>
+subsection\<open>Generality\<close>
 
-text\<open>With\<close>
+text\<open>Only the two defining properties (lemmas TwoSum-correct1 and TwoSum-correct2) of the TwoSum-method are needed for the mpfs properties of error-free computation. Any software or hardware format that enables such a possibility to add two values and "record" the precise error is in principle suited for error-free computations using these recursive algorithms. As four our @{typ float}s, additional lemmas about the format like exact rounding would be needed to make use of Shewchuk's "nonoverlapping" property that he proves to be preserverved by them in @{cite "Shewchuk"}. Since this property is needed to make assertions about the first components approximation quality or the maximum expansion length, these cannot be provided as HOL-facts yet.\<close>
 
-fun mpf_neg :: "mpf \<Rightarrow> mpf" where
-  "mpf_neg (a, es) = (float_neg a, map float_neg es)"
+section\<open>Further Operations and Constants\<close>
+
+text\<open>We provide a test if the mpf represents 0:\<close>
+definition "IsZero_mpf mpf \<longleftrightarrow> Iszero (approx mpf) \<and> errors mpf = []"
 
 text\<open>\<close>
-(*<*)
 text\<open>From CodeFloat\cite{IEEE_Floating_Point-AFP} we use the definition:\<close>
 definition One :: float where
 "One = Abs_float (0, bias float_format, 0)"
 declare One_def[code del]
 
-code_printing constant "One :: float" \<rightharpoonup>
-  (SML) "1.0" and (OCaml) "1.0"
-
+text\<open>Together with @{const Plus_zero} and @{const Minus_zero}, we can define:\<close>
 definition Plus_zero_mpf :: mpf where
   "Plus_zero_mpf = (Plus_zero, [])"
 
@@ -1054,7 +1088,13 @@ definition Minus_zero_mpf :: mpf where
 
 definition One_mpf :: mpf where
   "One_mpf = (One, [])"
-(*>*)
+
+text\<open>A negation will be useful to get a subtraction operator from mpf-add:\<close>
+
+fun mpf_neg :: "mpf \<Rightarrow> mpf" where
+  "mpf_neg (a, es) = (float_neg a, map float_neg es)"
+
+
 (*<*)
 (* Mapping natual numbers to floats *)
 fun float_of :: "nat \<Rightarrow> float" where
@@ -1093,41 +1133,43 @@ text\<open>where P is an undefined dummy predicate. At the last step, the output
        TwoSum a\<^sub>0 a\<^sub>1 = (x1, x2) \<Longrightarrow>
      P (x1c, [x2c, x2b, x2a, x2])"
 text\<open>\<close>
-text\<open>To demonstrate the @{const TwoSum} sequence carried out by grow-mpf, we use the following graphic:\<close>
-text_raw\<open>
-  \vspace{0mm}
-
-  \begin{figure}[h!]
-    \centering
-    \includegraphics[width=13cm]{fabi}
-    \caption[Bildunterschrift]{The float @{text \<open>f\<close>} is added to the mpf (@{text \<open>a\<close>}, @{text \<open>es\<close>}). TwoSum is represented by a box where the larger value, @{text \<open>x\<close>}, is output to the left side and the smaller one, @{text \<open>y\<close>}, to the bottom. On the top, the function call is passed on. The returned mpf (bottom) is built from right to left.}
-  \end{figure}
-\<close>
-
 text\<open>@{theory_text \<open>value "approx output"\<close>} delivers\<close>
 text\<open>@{text \<open>
 "Plus_zero \<oplus> One \<oplus> undefined \<oplus> undefined \<oplus> undefined \<oplus> undefined \<oplus> undefined"
   :: "IEEE.float"\<close>}\<close>
 
 
-chapter\<open>Code generation\<close>
+chapter\<open>Code generation and Output\<close>
+
+text \<open>To profit from the accelerated execution of hardwired float operations (and also to enable an output for them in Isabelle, see below), the HOL-code needs to be translated into a compilable language like SML. To this end, Isabelle provides the @{command export_code}
+command. It uses the @{command code_printing} statements of the current context. However, due to such conversions being prone to introducing errors, only safe translations are being used by default, i.e. those that preserve the HOL-statements with high certainty. Thus, to enable the generation for hardware float using code, some additional translations need to be added. These should be tested thoroughly to ensure the resulting ML code's correctness.\<close>
+
+section\<open>Problems\<close>
+
+text\<open>In addition to the computation being possibly incorrect (see section "Testing PolyML"), two more problems hinder the testing possibilities:
+\<^item> @{theory_text "value [code]"} runs into an error because the translation from the computed @{ML_type real} back into a HOL term is not implemented.
+\<^item> Evaluating it via the ML command only gives the inexact representation as a rounded sequence in base 10.
+
+To make matters worse, the simplifier can't simulate the float operations in HOL due a lack of lemmas for the very abstract definitions of the via an all-quantifier over HOL's @{typ real} type. Thus, we have no way to compute the correct result in our verified setting for a comparison with the SML output.
+\<close>
+
 section\<open>Use of SML floats\<close>
 
-text\<open>To enable computation for hardware floats, @{theory_text "theory Code_Float"}\cite{IEEE_Floating_Point-AFP} provides the built-in operators of the target language:\<close>
+text\<open>To enable computation for hardware floats, @{theory_text "theory Code_Float"}\cite{IEEE_Floating_Point-AFP} provides the built-in operators of the target language, e.g.:\<close>
 code_printing constant "op / :: float \<Rightarrow> float \<Rightarrow> float" \<rightharpoonup>
   (SML) "Real.'/ ((_), (_))" and (OCaml) "Pervasives.( '/. )"
 declare divide_float_def [code del]
 
 text\<open>The other operations are defined analogously.
 
-Even ML's comparisons can be used (ML's @{ML_type bool} is already defined as translation for HOL's @{typ bool} in the @{theory Main} theory @{theory HOL}):\<close>
+Even ML's comparisons can be used (SML's @{ML_type bool} is already defined as translation for HOL's @{typ bool} in the @{theory Main} theory @{theory HOL}):\<close>
 
 code_printing constant "Orderings.less :: float \<Rightarrow> float \<Rightarrow> bool" \<rightharpoonup>
   (SML) "Real.< ((_), (_))" and (OCaml) "Pervasives.(<)"
 declare less_eq_float_def[code del]
 
 section\<open>Printing Floats\<close>
-text\<open>If we decide that an unchecked code module is safe enough for us, we can use the format @{typ Float.float}\cite{float} from Isabelle's HOL-library.\<close>
+text\<open>If we decide that an unchecked code module is safe enough for us, we can use the format @{typ Float.float}\cite{float} from Isabelle's HOL-library to get the ability to print IEEE floats.\<close>
 
 text\<open>To enable the conversion from @{text IEEE.float} to @{typ Float.float} in the generated code, we first insert the possibility to produce them from integers:\<close>
 
@@ -1213,26 +1255,84 @@ text\<open>produces\<close>
 text\<open>which is an error-free representation.
 \<close>
 
+chapter\<open>Testing\<close>
+
+section\<open>PolyML in Isabelle2015\<close>
+
+text\<open>
+In SML the IEEE-floats are called @{ML_type real}
+and use hardware operations by default. Thus, the translation
+
+@{theory_text \<open>
+
+code_printing type_constructor float
+
+  (SML) "real"
+
+\<close>}
+
+from @{text "Code_Float"} immediately suggests itself. When executing the presented methods however, it turned out that the output was obviously wrong. Tracing this problem back to individual code blocks lead to the conclusion that already the @{const TwoSum}
+method delivered wrong results: The sum of the two input values did not match the sum of the two output values. Luckily, the error was so large that it was not overcast by the inexact representation as rounded sequence in base 10.
+
+
+
+This problem with the translated code turned out to stem from an unexpected computation of intermediate results in the "double extended" precision (@{cite IEEE} section 3.7). The ML-code used it on some systems and thus computed the error value e as the error how it would be for an addition in extended precision. As this result needed to be translated into the 64-bit format for further usage, it needed to be rounded again at the end of the method. The error of this conversion is not accommodated for in the other output value designed to deliver the correctly rounded result of the 64-addition, thus nullifying the property of error-free transformation. The 80-bit registers are used until storage in a 64-bit value is enforced. Our results are thus not determined by the sequence of operations specified in the code, but by hardly controllable circumstances e.g. the way PolyML handles function calls (see @{url "http://lists.inf.ed.ac.uk/pipermail/polyml/2015-October/001661.html"}).
+Worse still, due to different instruction sets being used, the correct behavior was depending on the operating system used.
+
+One way to circumvent these arbitrary changes in the results is to enforce the storage in a 64-bit value after every floating point operation. From this, the approach of the "STORE"-method:
+was derived: The result of every addition or subtraction is written to a ML variable (which uses double precision). This value is then used for next operation.\<close>
+
+(*ensure rounding: store variables*)
+definition "STORE x = x"
+code_printing constant "STORE :: 'a \<Rightarrow> 'a" \<rightharpoonup>
+  (SML) "(Unsynchronized.! (Unsynchronized.ref ((_))))"
+declare [[code drop: STORE]]
+
+(* twoSum with STORE *)
+fun twoSumSTORE :: "float * float \<Rightarrow> float *float"
+  where "twoSumSTORE (a, b) =
+    (let
+      s =  STORE(a + b);
+      an = STORE(s - b);
+      bn = STORE(s - an);
+      da = STORE(a - an);
+      db = STORE(b - bn);
+      e =  STORE(da + db)
+    in (s, e))"
+
+text\<open>This leads to the correct results, but is very slow in execution.
+\<close>
+text\<open>
+As another way of avoiding the unpredictable additional precision, the processors could be set to a mode that does not use this unwanted feature. This could be confirmed through compiling the exported TwoSum code with another ML compiler: running mlton with the flag "-codegen amd64" apparently produces a correct executable for TwoSum. It is desirable to make a similar modification to PolyML. This will also make the @{command value} command use the correct code. Kindly, polyml maintainer David Mathews provided a changed version (@{url "https://github.com/polyml/polyml/commit/218dfbd9ceb0f7ade51aece3de4f3e3800f697fb"}) that should work on most systems to run Isabelle with and agreed to consider the behaviour of floats in future polyml-releases. It works by setting the precision to 64-bit in the control word of every float instruction. The change made it into polyML 5.6 (@{url "http://lists.inf.ed.ac.uk/pipermail/polyml/2015-October/001695.html"}) and is thus available in Isabelle2016.
+\<close>
+
+
+section\<open>Ideas for Tests in Isabelle2016\<close>
+
+text\<open>We reuse the constant @{const list} from the chapter "Code generation and Output".\<close>
+
+text\<open>@{const Float.float}s are much more readable when they are in their normal form. A @{const Float.float} with values \<open>a\<close> and \<open>b\<close> represents the value \<open>a * 2 ^ b\<close>. It is normal if \<open>a\<close> is uneven.\<close>
 abbreviation toNF :: "float \<Rightarrow> Float.float" where
   "toNF \<equiv> normfloat o toFloat"
-(*
-value [code] "toNF (fold op+ (tl list) (hd list))"
-value [code] "listsum (map toNF list)"
-value [code] "map toNF (let
+
+text\<open>Expressions like
+
+@{theory_text \<open>value [code] "toNF (fold op+ (tl list) (hd list))"\<close>}
+
+@{theory_text \<open>value [code] "listsum (map toNF list)"\<close>}
+
+@{theory_text \<open>value [code] "map toNF (let
   mpf = (hd list, tl list);
-  (a, es) = mpf_transform mpf in
-  a # es)"
-value [code] "map toNF (vecSum list)"
-value [code] "let
+  (a, es) = grow_by_fold mpf (float_of 4) in
+  a # es)"\<close>}
+
+@{theory_text \<open>value [code] "let
   mpf = (hd list, tl list);
-  (a, es) = mpf_transform mpf in
+  (a, es) = grow_mpf_tr mpf (float_of 4) in
   map toNF (a # es)"
-value [code] "map toNF (vecSum list)"
-value [code] "let
-  mpf = (hd list, tl list);
-  (a, es) = mpf_transform mpf in
-  map toNF (a # es @ vecSum list)"
-*)
+\<close>}
+
+produce now output and can be examined for correctness.\<close>
 
 (*
 text\<open>We can use the grow_mpf procedure to iteratively build an mpf with the exact listsum of a float list as value:\<close>
@@ -1297,6 +1397,7 @@ Based on the existing formalization of IEEE-floats, we then specified a data for
 
 section\<open>Future Work\<close>
 text\<open>A correctness proof for the @{const TwoSum} method needs to be converted to Isabelle's IEEE754 formalization. This will then also enable proofs for Shewchuk's "nonoverlapping" property, which, when implemented, allows more assertions about multiple precision float arithmetic to be formally verified, e.g. about the maximum length of a valid @{typ mpf}, or the quality of the approximation stored in the first component.
+
 Another improvement could be made by adapting code generation for IEEE-floats to support more of Isabelle's target languages. This will make our arithmetic library more flexible for use in languages than SML. However, the correct behaviour of floats in the language should be ensured beforehand, to avoid getting wrong results when using the generated code.\<close>
 
 (*<*)
