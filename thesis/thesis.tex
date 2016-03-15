@@ -1,0 +1,259 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{isabelle,isabellesym}
+
+% further packages required for unusual symbols (see also
+% isabellesym.sty), use only when needed
+
+%\usepackage{amssymb}
+  %for \<leadsto>, \<box>, \<diamond>, \<sqsupset>, \<mho>, \<Join>,
+  %\<lhd>, \<lesssim>, \<greatersim>, \<lessapprox>, \<greaterapprox>,
+  %\<triangleq>, \<yen>, \<lozenge>
+
+%\usepackage{eurosym}
+  %for \<euro>
+
+%\usepackage[only,bigsqcap]{stmaryrd}
+  %for \<Sqinter>
+
+%\usepackage{eufrak}
+  %for \<AA> ... \<ZZ>, \<aa> ... \<zz> (also included in amssymb)
+
+%\usepackage{textcomp}
+  %for \<onequarter>, \<onehalf>, \<threequarters>, \<degree>, \<cent>,
+  %\<currency>
+
+% this should be the last package used
+\usepackage{pdfsetup}
+
+% urls in roman style, theory text in math-similar italics
+\urlstyle{rm}
+\isabellestyle{it}
+
+% for uniform font size
+%\renewcommand{\isastyle}{\isastyleminor}
+
+\newcommand{\snip}[4]
+{\expandafter\newcommand\csname #1\endcsname{#4}}
+\input{snippets}
+
+\begin{document}
+
+\title{Bachelorarbeit}
+\author{Fabian Hellauer}
+\maketitle
+
+\tableofcontents
+
+% sane default for proof documents
+\parindent 0pt\parskip 0.5ex
+
+\section{Abstract}
+
+Many problems in geometry or topology systems can only be approximated by large computations with long sequences of operations. To best benefit from the speedup of machine computation, one has to make use of the hardwired floating point instructions that are specified in the IEEE-754-standard. However, using the IEEE-floats directly would often create the need for a complicated numerical analysis due to them being affected by round-off.
+Another one of their properties removes this need however: Alongside the result, the round-off error of an addition or subtraction can be computed. Storing and using it in further operations thus makes the computation error-free.
+We give a simple data format in Isabelle/HOL(link) that uses this approach to provide fast algorithms for error-free addition, subtraction and multiplication.
+
+\section{Introduction}
+
+When attacking computational problems by machine, often times fixed precision numbers have to be used: Arbitrary precision numbers are very slow, mostly because they don't use the hardware floating point operations that are available to modern systems. If the finite set of these machine numbers suffice (or an approximation within their range), the use of hard-wired operations can speed up the computation by a large factor. However, they introduce the problem of round-off, which, when not handled, will affect the output's precision in complex ways.
+
+\subsection{Round-off}
+Round-off occurs when a the result of a floating point operation cannot be represented using the fixed size of exponent and mantissa defined by the floating point format. It also occurs when casting measured or infinitely precise data in such a limited precision format.
+
+\paragraph{Dealing with round-off}
+If round-off affected arithmetic is used in a long sequence of operations, the result will only approximate within a certain range. Correctness proofs for assertions about this range will require a tedious numerical analysis of the algorithms which is very complex to do formally.
+
+\paragraph{Avoiding round-off}
+Another approach is to avoid round-off altogether: However, using an implementation of infinitely precise rationals might severely slow down the code's execution due to them not making use of the hardwired floating point operations that modern machines provide.
+
+\paragraph{Float expansions} If a finite set of numbers with magnitude and precision in the range of IEEE floats suffices however, both the precision and fast execution speed can be preserved: This thesis presents the "float expansion" approach where the accumulated errors are stored in a list alongside with an approximation for the result of the executed sequence. It provides addition, subtraction and multiplication within the numbers representable in this way (a finite superset to IEEE floats).
+
+\subsection{Problem statement}
+Isabelle (link) already provides the arbitrary precision format
+%real
+in its (library...) . The IEEE floats a are modeled in the AFP-theroy
+% link 
+The task for this bachelor thesis is to present a multiple precision float arithmetic in Isabelle/HOL using the "floating point expansion" approach" and to verify its correctness
+(This is described in several scientific papers as "floating point expansion " or "multiple term" strategy. It is an easy way to gain considerable amounts of precision while still using the IEEE floating point specification to enable the widely available acceleration of hardware operations.)
+
+\subsection{Contributions}
+We explain different aspects of this "floating point expansion" approach and then provide the data format \typmpf
+, which stands for "multiple precision float". It implements error-free addition, subtraction and multiplication within the numbers representable in this way (a finite superset to IEEE floats).
+We use the formal setting of Isabelle/HOL to specify and prove correct the algorithms, but we make sure all of them can easily be executed by adapting Isabelle's SML code generation for IEEE-floats.
+
+\subsection{Unsortiertes Einleitungszeug}
+Vermutlich alles schon eingebaut:
+Only a short operation sequence first described by ... is needed.
+When attacking computational problems by machine, a trade-off between complexity and speed has to be made: Using an implementation of infinitely precise rationals might severely slow down the code's execution, whereas replacing the sequence of operations by their IEEE754-counterparts will cause round-off errors to appear. Numerical code using hardware floating point operations has to consider the problem of round-off. To avoid the tedious analysis of these accumulating errors
+
+\section{Code Analysis}
+
+The mpf data format is designed to implement the ideas described in [Literaturanalyse] in a very simple way. It is defined as follows:
+\mpfdef
+where the tuple of a float and a float list should be seen together as a non-empty float list, ordered by decreasing magnitude. The mpf's represented value is the infintite precise sum of all its components. Note that multiple mpfs may represent the same value:
+% lemmaexample
+% let a = mpf1 b = mpf1 in Val_mpf a = Val_mpf b /\ a != b
+Many of these are invalid if we enforce Shewchuck's "non-overlapping" property on the float list, see section ... . We further decrease the allowed representations by not allowing zero components in the list's tail: Since they don't contribute to the mpf's value, omitting them is an easy way to save storage.
+The most significant component of the unevaluated sum of floats has a special place in the first tuple component. The list data structure enables the easy removal of zero components in the operations, while the separate handling of the first component makes the simple definition
+\newline
+\approxdef
+\newline
+possible. This summand with the special name \constapprox eliminates the need for a test to see if the list is non-empty when reading out the mpf's value. For a discussion as to how good this approximates the lists error-free value, see section     . When considering proof complexity, the special handling of the first component should not impose big problems compared to a standard list, only the induction step (where an element is inserted at position 2) will turn out to look more complicated (see section proofs).
+
+\subsection{IEEE in Isabelle}
+
+The "IEEE standard for floating point arithmetic" (link via bibtex) (IEEE 754-2008) is already modeled in the AFP-theory IEEE\_Floating\_Point/\IEEE.
+While the formalization is quite general to accommodate for the many different allowed formats that arise when different values for precision and exponent range are used (the decimal formats are omitted), a strong precedence for the "binary64" format and the "roundTiesToEven" rounding mode can be observed. The functions using this mode are lifted to definitions with simpler names, e.g. Finite
+In the case of the format, this is justifiable by it being in wide and hardware-implemented on most systems.
+In the case of the rounding mode, the IEEE standard defines this one to be the standard / default (p. 16).
+We will also use this format and rounding mode, which also enables us to use the codeprinting defined in theory CodeFloat. The "roundTiesToEven" rule is the only available round-to-nearest mode, which is explicitly required for the TwoSum-properties[HFPA 4.3.3] and thus for all the presented algorithms.
+
+\subsection{Error free operations}
+
+The core idea is to provide an error-free form of the basic operations between IEEE floats. Since we want the output to be floats as well, and rounding occurs for almost all input values, the only way to do so is to use the round-affected IEEE operation and then computing the error, also represented as floats. For the basic operations +, - and *, the error will turn out to be exactly another float value that can be easily computed. Thus, we compute a value e such that a diamond b = r + e,
+where r is the result that the IEEE-operation returns.
+Thus, t will have the sign - or + corresponding to whether r is above resp. below the exact mathematical result of a diamond b.
+
+%
+\paragraph{FastTwoSum}
+For an addition of a and , we can perform 
+%  FastTwoSumdef
+where the operations are the round-affected IEEE-operations.
+If the exponent , one can show that s-a is exactly representable as an IEEE-float by analyzing the needed mantissa length for the result. This requires two case distinctions... Using the fact that - provides correct rounding, we know that t will have exactly this value.
+
+\paragraph{TwoSum}
+
+The condition ... is fulfilled if ...
+
+we can branch 
+
+This sequence is not used by many authors because they want to execute their code on optimized floating point hardware, where the condition check leads to penalties in execution speed since its outcome cannot be predicted. Instead, they perform
+
+Notice that the first 
+
+We compare the speed of TwoSumIf and TwoSum in section ...
+
+\subsection{Using functional construct}
+In the literature, the algorithms are presented in an imperative language, with the float expansion stored in an array-like structure. However, the "random-access" (TODO) features are not used: only standard sorted traversal is performed. Thus, there is the easy possibility to use the HOL
+%list
+instead. List traversal can be performed by foldl or foldr, possibly benefiting from compiler optimization. For clarification, we provide some algorithms in a recursive style instead, see section compress.We choose to store the components of largest magnitudes in the lists initial components as they can be accessed very easily.
+%
+\subsection{Strategy}
+
+The general idea of the presented algorithms is to provide a way of performing error-free computations (within a finite subset of the rational numbers), while still making use of the accelerated hardware operations of IEEE-floats (affected by rounding after each step). This is done by keeping a "record" of all the errors made and storing them in a list alongside the approximation. Through clever cancellation of accumulated errors and removing the resulting zero-components, this list's length can be kept at a moderate level.
+A key component in being able to record the errors made upto a point is the TwoSum method first described by (first autor), possibly used earlier. A Central realisation is that for IEEE floating point numbers representing finites, as long as the result of a plus (or minus) operation does not lie outside the representable interval, the error of this calculation can be represented and even computed using again only float-addition and subtraction.
+
+
+Sie musste außerdem erweitert werden, um die Ausgabe des generierten Codes anzuzeigen und um die Überprüfungen auf Überlauf durchführen zu können.
+
+% Stil im Titel
+\subsection{Testing SML's "real" type}
+
+\subsection {Testing the generated SML code}
+% TODO: Stil im Titel
+\paragraph {Usage of Float.float}
+
+To work around the missing possibility for equality queries on IEEE.floats in HOL, we need to transform the floats in another Format to test the implementation with "Store" against the implementaion without it. To this end, we provide the
+%toFloatdefinition
+where
+%tomanexp
+is the
+%codemodule
+%tomanexpdef
+provided by Fabian Immler. It is undefined in HOL. Using this, we can transform IEEE floats to infinitely precise Float.floats and compare the resulting values via their built in
+%constequalfloat
+function. Implicitly, we use the fact that by design, the finite IEEE-floats are a subset of the of the Float.floats. A disadvantage is that we once again rely on the correctness of a SML function. However, the advantage is that we don't have to provide conversion functions for all of Real.real which would be quite complicated. The sign-mantissa-exponent representation, that both float formats share, makes the transformation back just as easy:
+% offloatdef
+As desired, a value for mantissa or exponent that does not fit in the SML double float will produce an error during evualtion.
+
+\section{Use cases for mpf}
+The MPf data type's precision is only limited by the exponent minimum. It is also absolute in some sense: The value of the least significant bit
+%ulpmpf
+does not depend on the MPF's magnitude as it would for IEEE-floats alone.
+Thus, we define
+%ulpmpfdef
+While we don't need this definition to make statement about the operations
+% italic{within}
+the \typmpf type (as they are exact), this is the bound we can achieve on correct conversions from or to infinite precision types.
+Since our algorithms are designed to keep a good approximation for
+% Valmpf
+in the first component, it makes sense to say that the mpf overflows if its first component overflows during one of these operations. This limits the number range. Together with the maximum precision as explained above, we get a finite set of possible mpfs values.
+The opposite of an overflow is staying finite: Extending the
+%Finite
+predicate from
+% Code_float, we define
+%Finitempfdef
+to test if none of the components are NaN or Infinity values. To test for zero components in the error list, we use
+%validdef
+which is a stronger property as
+%lemma validfinite
+shows.
+
+
+As floats, the first and last component are bound in magnitude and precision. Thus, the highest relative precision can be achieved for numbers that are close to overflow in the first component. It corresponds to a 
+% \[e_max - e_min + fracwidth = 2*2047 + 52 = 4146] bit binary sequence.
+%Grafik number line: HBFA float (p. 18) vs. mpf (gleichverteilt): Any two adjacent MPFs have a fixed difference equal to ulp_float
+This diagram also demonstrates the limits of mpf as a whole: Representable are 2 hoch 4146 uniformy distributed numbers between minus threshold floatformat and threshold floatformat. This is enough for many computations, but a clear difference to infinite precision types like
+%Realreal
+.
+
+
+\subsection{Input}
+The set of numbers representable by mpf is finite.
+Input needs to be rounded to one of these expressible values. we provide the
+%from_real
+function that uses
+%Realreal
+'s operations to iteratively add components corresponing to the current error to the mpf until one such component is zero. This could however also terminate due to the remainer being closer to zero than any non-zero float (the resulting mpf would be rounded), which is why we also provide the
+%safe_from_real
+function that is supposed to throw an error if this is the case (recognized by the remainder not being zero).
+% Die Definitionen als Boxen zwischen dem Text?
+Notice that
+% "Isvalid a ==> from_real (Val_mpf a) = a"
+is not true because the representation might change,
+however
+%"Isvalid a ==> Val (from_real (Val_mpf a)) = Val_mpf a"
+is.
+
+
+
+\section{Literature review}
+
+All of the consulted authors (Joldes et al., Shewchuck, Priest, HBFA) aim at speeding-up the error-free computation of numbers
+%Blatt 2 ... ToDo
+focused on using the functional style to make an understandable implemenation where modifications like the zero-component removal or additional restraints on mpf properties (see section .. ) are easily added.
+This general setting is much more suited for Isabelle which mainly serves the goal of making assertions about code correctness, not the (very system dependant) execution speed.
+
+
+\section{Results and conclusion}
+
+Im Theorembeweiser Isabelle waren die IEEE-754-floats schon modelliert. Darauf aufbauend stellt diese Arbeit eine Möglichkeit zur Verfügung, sie für ein schnelles rundungsfreies Addieren und Subtrahieren zu verwenden. Dazu haben wir die Algorithmen dafür aus der Literatur in die Sprache HOL übersetzt und für unsere Zwecke an das funktionale Setting angepasst.
+
+\subsection{Possible Applications}
+Only problems where the input is exactly representable as IEEE floats (or measured within their precision) truly benefit from the error-free
+%mpf
+operations. In other applications, some loss of precision is impossible to avoid. Depending on some numerical properties, these errors might amplify during the course of further computation and make the result inexact again. A main drawback is also that no division operator is available.
+
+
+... ist damit das Format "Multiple Precision Float" fertiggestellt und einsatzbereit.
+
+% optional bibliography
+%\bibliographystyle{abbrv}
+%\bibliography{root}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
+
+
+
+
+
+
+
+
+
+
