@@ -600,6 +600,10 @@ text \<open>In theory \<open>IEEE\<close>, the float operations use the \<open>+
 
 For this thesis, we want the IEEE-operations to use a different symbol, and reserve the @{text "+"} operator for exact number formats. Fortunately, Isabelle provides spare symbols and the @{command abbreviation} command, which makes sure even the output uses the new notation. We thus state at the beginning of our @{command theory}:\<close>
 --\<open>Use another notation for the possibly inexact IEEE-operations.\<close>
+help "notation"
+
+term "op \<longrightarrow>"
+
 abbreviation round_affected_plus :: "float \<Rightarrow> float \<Rightarrow> float" (infixl "\<oplus>" 65) where
   "round_affected_plus a b \<equiv> a + b"
 
@@ -631,12 +635,10 @@ definition TwoSum :: "float \<Rightarrow> float \<Rightarrow> float \<times> flo
 text\<open>
 Here, we compute a value \<open>y\<close> such that \<open>a + b = x + y\<close>, where \<open>x = a \<oplus> b\<close>. The following lemma states the latter:\<close>
 
-lemma TwoSum_correct1: "TwoSum a b = (x, y) \<Longrightarrow> x = a \<oplus> b"
-  --\<open>\<open>x\<close> is defined in the first line of @{const TwoSum} and not changed thereafter.\<close>
-  by (auto simp: TwoSum_def Let_def)
 
-text\<open>The other property needs the preconditions that both the input and the output represent real numbers (as opposed to the special values \<open>NaN\<close> and \<open>\<plusminus>\<infinity>\<close>). This is checked by the predicate @{const Finite}. We use the exact arithmetic of @{typ Real.real} and the conversion @{const Val}
-@{text "::"} @{text "float => real"} from \<open>IEEE_Floating_Point/IEEE\<close>.\<close>
+
+lemma TwoSum_correct1: "TwoSum a b = (x, y) \<Longrightarrow> x = a \<oplus> b"
+  by (auto simp: TwoSum_def Let_def)
 
 lemma TwoSum_correct2:
   fixes a b x y :: float
@@ -685,7 +687,11 @@ text\<open>Dekker@{cite dekker} shows that in some situations, sequences of thre
 section\<open>MPF definitions\<close>
 text\<open>The new data format is designed to implement the idea of storing all the errors as an unevaluated sum. It is defined as follows:\<close>
 --\<open>Define the "Multiple Precision Float"\<close>
+
+
 type_synonym mpf = "float \<times> float list"
+
+
 fun approx :: "mpf \<Rightarrow> float" where
   "approx (a, es) = a"
 fun errors :: "mpf \<Rightarrow> float list" where
@@ -790,13 +796,15 @@ lemma safe_TwoDiff_correct1:
   "safe_TwoDiff a b = Some (x, y) \<Longrightarrow> x = a \<ominus> b"
   by (auto simp: safe_TwoDiff_def Let_def TwoDiff_correct1 split: split_if_asm)
 *)
+
 lemma safe_TwoSum_correct2:
-  fixes a b x y :: float
   assumes "Finite a" "Finite b" "Finite (a \<oplus> b)"
   assumes out: "safe_TwoSum a b = Some (x, y)"
   shows "Val a + Val b = Val x + Val y"
-  using assms
+using assms
 by (auto intro!: TwoSum_correct2 simp: safe_TwoSum_def Let_def split: split_if_asm)
+
+
 (*
 lemma safe_TwoDiff_correct2:
   fixes a b x y :: float
