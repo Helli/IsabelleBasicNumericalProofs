@@ -277,19 +277,34 @@ definition "output = safe_grow_mpf_rec test_mpf (float_of 1)"
 lemma "P output" unfolding output_def test_mpf_def safe_grow_mpf_rec.simps
   apply (clarsimp split: prod.splits) oops
 
-fun nbuild_mpf :: "float list \<Rightarrow> mpf option" where
-  "nbuild_mpf [] = undefined" |
-  "nbuild_mpf [f] = Some (f, [])" |
-  "nbuild_mpf (f # fs) = do {
-    a \<leftarrow> nbuild_mpf fs;
+fun build_mpf :: "float list \<Rightarrow> mpf option" where
+  "build_mpf [] = undefined" |
+  "build_mpf [f] = Some (f, [])" |
+  "build_mpf (f # fs) = do {
+    a \<leftarrow> build_mpf fs;
     safe_grow_mpf_rec a f
   }"
+
+fun plus_mpf :: "mpf \<Rightarrow> mpf \<Rightarrow> mpf option" where
+  "plus_mpf (a1, []) mpf2 = safe_grow_mpf_rec mpf2 a1" |
+  "plus_mpf (a1, e1 # es1) mpf2 = do {
+    a \<leftarrow> plus_mpf (e1, es1) mpf2;
+    safe_grow_mpf_rec a a1
+  }"
+
+fun minus_mpf where
+  "minus_mpf mpf1 mpf2 = plus_mpf mpf1 (mpf_neg mpf2)"
 
 ML \<open>val grow_mpf_ml = @{code safe_grow_mpf_rec}\<close>
 ML \<open>val test1 =  (2341.0, [~12.324, 0.0003])\<close> (* \<approx>2328.6763 *)
 ML \<open>val test2 =  (2351.0, [~12.325, 0.00003])\<close> (* \<approx>2338.67503 *)
 ML \<open>grow_mpf_ml test1 5000.00\<close>
 ML \<open>grow_mpf_ml test1 0.001\<close>
+ML \<open>val test1_list = fst test1 :: snd test1\<close>
 ML \<open>val test2_list = fst test2 :: snd test2\<close>
+ML \<open>val test_list = test1_list @ test2_list\<close>
+ML \<open>@{code build_mpf} test_list\<close>
+ML \<open>@{code plus_mpf} test1 test2\<close>
+ML \<open>@{code minus_mpf} test1 test2\<close>
 
 end
