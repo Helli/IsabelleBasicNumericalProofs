@@ -3,8 +3,14 @@ imports
   test_utils
   "$AFP/IEEE_Floating_Point/Code_Float"
   "$AFP/IEEE_Floating_Point/FloatProperty"
+  "$AFP/IEEE_Floating_Point/RoundError"
   "~~/src/HOL/Library/Monad_Syntax"
 begin
+
+lemma "Val Plus_zero = 0"
+  unfolding Val_def Plus_zero_def
+  apply (simp add: Abs_float_inverse is_valid_def)
+  done
 
 --\<open>Define the "Multiple Precision Float"\<close>
 type_synonym mpf = "float \<times> float list"
@@ -100,7 +106,7 @@ lemma safe_TwoSum_finite:
   assumes "safe_TwoSum a b = Some (s, e)"
   shows safe_TwoSum_finite1: "Finite s"
   and safe_TwoSum_finite2: "Finite e"
-  using assms
+using assms
   by (auto simp: safe_TwoSum_def Let_def split: split_if_asm)
 
 lemma safe_TwoSum_correct1:
@@ -112,8 +118,8 @@ lemma safe_TwoSum_correct2:
   assumes "Finite a" "Finite b" "Finite (a \<oplus> b)"
   assumes out: "safe_TwoSum a b = Some (x, y)"
   shows "Val a + Val b = Val x + Val y"
-  using assms
-by (auto intro!: TwoSum_correct2 simp: safe_TwoSum_def Let_def split: split_if_asm)
+using assms
+  by (auto intro!: TwoSum_correct2 simp: safe_TwoSum_def Let_def split: split_if_asm)
 
 definition "IsZero_mpf mpf \<longleftrightarrow> Iszero (approx mpf) \<and> errors mpf = []"
 fun Val_mpf :: "mpf \<Rightarrow> real" where
