@@ -31,6 +31,20 @@ unfolding is_normal_def
   apply (auto simp del: Float_of_normal.simps simp add: Float_of_normal_correct)
   done
 
+fun Float_of_subn_or_0 :: "format \<Rightarrow> representation \<Rightarrow> Float.float" where
+  "Float_of_subn_or_0 x (s, _ ,f) =
+    Float ((-1)^s * f) ((1 :: int) - bias x - fracwidth x)"
+
+lemma Float_of_subn_or_0_correct: (* only subnormal numbers or 0 *)
+  shows "real_of_float (Float_of_subn_or_0 x (s, 0, f)) = valof x (s, 0, f)"
+  apply (simp add: two_powr powr_divide2[symmetric])
+  done
+
+(* todo: corollary und Kombination von beidem *)
+
+thm field_simps
+thm divide_simps
+
 definition float_format_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation" where
   "float_format_of_Float x f =
     (if 0 \<le> real_of_float f (*einfacher möglich?*) then 0 else 1,
@@ -44,7 +58,8 @@ lemma
   apply (auto simp: float_format_of_Float_def)
   oops
 
-(* liften? *)
+section \<open>Lifting important results\<close>
+(* Todo *)
 
 definition ferr :: "format \<Rightarrow> roundmode \<Rightarrow> real \<Rightarrow> real"
 where "ferr x m a = valof x (round x m a) - a"
