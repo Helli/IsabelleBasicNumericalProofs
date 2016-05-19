@@ -7,50 +7,57 @@ imports
 begin
 
 term Val
-term Float
-term round
-term ulp
-term fadd
-term One
-
 value "valof float_format (1, bias float_format, 124)"
+value "valof float_format (0, 0, 0)"
 
-definition ferr::"format \<Rightarrow> roundmode \<Rightarrow> real \<Rightarrow> real"
-where "ferr x m a = valof x (round x m a) - a"
+fun Float_of_normal :: "format \<Rightarrow> representation \<Rightarrow> Float.float" where
+  "Float_of_normal x (s,e,f) =
+    Float ((-1)^s * (2 ^ fracwidth x + f)) (int e - bias x - fracwidth x)"
 
-term "truncate_down 53"
+lemma two_powr: "2 ^ a = 2 powr a"
+  using powr_realpow by simp
 
-definition
+lemma Float_of_normal_correct:
+  assumes "e > 0" (* only normal numbers *)
+  shows "real_of_float (Float_of_normal x (s, e, f)) = valof x (s, e, f)"
+using assms
+  apply (simp add: two_powr powr_divide2[symmetric])
+  apply (simp add: field_simps)
+  done
+
+corollary "is_normal x f \<Longrightarrow> real_of_float (Float_of_normal x f) = valof x f"
+unfolding is_normal_def
+  apply (cases f)
+  apply (auto simp del: Float_of_normal.simps simp add: Float_of_normal_correct)
+  done
+
+definition float_format_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation" where
   "float_format_of_Float x f =
-    ((if f \<ge> 0 then 0 else 1),
-      nat (Float.exponent f + bias x),
-      nat (abs (Float.mantissa f) - 1) * fracwidth x)"
-
-fun Float_of_float_format where
-  "Float_of_float_format x (s,e,f) =
-    Float ((-1::int)^s * (fracwidth x + int f)) (int e - int (bias x) - fracwidth x)"
+    (if 0 \<le> real_of_float f (*einfacher möglich?*) then 0 else 1,
+    nat (Float.exponent f + int (bias x)),
+    nat (\<bar>Float.mantissa f\<bar> - 1) * fracwidth x)"
+thm float_format_of_Float_def[simplified]
 
 lemma
   shows "valof x (float_format_of_Float x f) = real_of_float f"
   unfolding mantissa_exponent
   apply (auto simp: float_format_of_Float_def)
-  sorry
+  oops
 
-lemma
-  shows "real_of_float (Float_of_float_format x f) = valof x f"
-  apply (cases f)
-  apply (auto simp: float_format_of_Float_def )
-  thm divide_simps
-  thm field_simps
-  sorry
+(* liften? *)
+
+definition ferr :: "format \<Rightarrow> roundmode \<Rightarrow> real \<Rightarrow> real"
+where "ferr x m a = valof x (round x m a) - a"
+
+term "truncate_down 53"
 
 lemma
   shows "is_valid x (float_format_of_Float x f)" "is_finite x (float_format_of_Float x f)"
-  sorry
+  oops
 
 term threshold
 lemma closest_eq:
-  assumes "blabla r"\<comment>\<open>normal, klein genug, etc...\<close>
+  assumes "blabla r"\<comment>\<open>normalisiert, klein genug, etc...\<close>
   shows "closest (valof x) p (Collect (is_finite x)) r =
     (
       let

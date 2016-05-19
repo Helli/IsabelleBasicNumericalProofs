@@ -7,6 +7,11 @@ imports
   "~~/src/HOL/Library/Monad_Syntax"
 begin
 
+lemma "Val One = 1"
+  unfolding Val_def One_def
+  apply (simp add: Abs_float_inverse is_valid_def float_format_def bias_def)
+  done
+
 lemma "Val Plus_zero = 0"
   unfolding Val_def Plus_zero_def
   apply (simp add: Abs_float_inverse is_valid_def)
