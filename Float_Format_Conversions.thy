@@ -28,7 +28,7 @@ using assms
 corollary "is_normal x f \<Longrightarrow> real_of_float (Float_of_normal x f) = valof x f"
 unfolding is_normal_def
   apply (cases f)
-  apply (auto simp del: Float_of_normal.simps simp add: Float_of_normal_correct)
+  apply (simp del: Float_of_normal.simps add: Float_of_normal_correct)
   done
 
 fun Float_of_subn_or_0 :: "format \<Rightarrow> representation \<Rightarrow> Float.float" where
@@ -45,6 +45,8 @@ lemma Float_of_subn_or_0_correct: (* only subnormal numbers or 0 *)
 thm field_simps
 thm divide_simps
 
+(* Obacht! Stark negative Exponenten werden auch mit bias noch negativ sein.
+  In eine representation dürfen aber nur natürliche Zahlen geschrieben werden...*)
 definition float_format_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation" where
   "float_format_of_Float x f =
     (if 0 \<le> real_of_float f (*einfacher möglich?*) then 0 else 1,
