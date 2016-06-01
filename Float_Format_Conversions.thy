@@ -6,44 +6,83 @@ imports
   "~~/src/HOL/Library/Float"
 begin
 
-term Val
 value "valof float_format (1, bias float_format, 124)"
 value "valof float_format (0, 0, 0)"
+
+section \<open>IEEE.float to Float.float\<close>
 
 fun Float_of_normal :: "format \<Rightarrow> representation \<Rightarrow> Float.float" where
   "Float_of_normal x (s,e,f) =
     Float ((-1)^s * (2 ^ fracwidth x + f)) (int e - bias x - fracwidth x)"
 
-lemma two_powr: "2 ^ a = 2 powr a"
-  using powr_realpow by simp
-
 lemma Float_of_normal_correct:
-  assumes "e > 0" (* only normal numbers *)
-  shows "real_of_float (Float_of_normal x (s, e, f)) = valof x (s, e, f)"
+  assumes "e > 0" --\<open>only normal numbers\<close>
+  shows "real_of_float (Float_of_normal x (s,e,f)) = valof x (s,e,f)"
 using assms
-  apply (simp add: two_powr powr_divide2[symmetric])
+  apply (simp add: powr_realpow powr_divide2[symmetric])
   apply (simp add: field_simps)
   done
 
-corollary "is_normal x f \<Longrightarrow> real_of_float (Float_of_normal x f) = valof x f"
+corollary Float_of_normal_rep:
+  "is_normal x r \<Longrightarrow> real_of_float (Float_of_normal x r) = valof x r"
 unfolding is_normal_def
-  apply (cases f)
+  apply (cases r)
   apply (simp del: Float_of_normal.simps add: Float_of_normal_correct)
   done
 
 fun Float_of_subn_or_0 :: "format \<Rightarrow> representation \<Rightarrow> Float.float" where
-  "Float_of_subn_or_0 x (s, _ ,f) =
+  "Float_of_subn_or_0 x (s,_,f) =
     Float ((-1)^s * f) ((1 :: int) - bias x - fracwidth x)"
 
-lemma Float_of_subn_or_0_correct: (* only subnormal numbers or 0 *)
-  shows "real_of_float (Float_of_subn_or_0 x (s, 0, f)) = valof x (s, 0, f)"
-  apply (simp add: two_powr powr_divide2[symmetric])
+lemma Float_of_subn_or_0_correct:
+  --\<open>only subnormal numbers or 0 (e = 0)\<close>
+  shows "real_of_float (Float_of_subn_or_0 x (s,0,f)) = valof x (s,0,f)"
+  apply (simp add: powr_realpow powr_divide2[symmetric])
   done
 
-(* todo: corollary und Kombination von beidem *)
+corollary Float_of_subn_or_0_rep:
+  "is_denormal x r \<or> is_zero x r \<Longrightarrow> real_of_float (Float_of_subn_or_0 x r) = valof x r"
+using assms
+unfolding is_denormal_def is_zero_def
+  apply (cases r)
+  apply (auto simp del: Float_of_subn_or_0.simps simp add: Float_of_subn_or_0_correct)
+  done
 
 thm field_simps
 thm divide_simps
+
+subsection \<open>Combining the finite cases\<close>
+
+fun Float_of_finite :: "format \<Rightarrow> representation \<Rightarrow> Float.float" where
+  "Float_of_finite x (s,0,f) = Float_of_subn_or_0 x (s,0,f)" |
+  "Float_of_finite x (s,e,f) = Float_of_normal x (s,e,f)"
+
+lemma Float_of_finite_correct: "real_of_float (Float_of_finite x r) = valof x r"
+  apply (cases r)
+  using Float_of_finite.simps Float_of_normal_correct Float_of_subn_or_0_correct
+  apply (metis Suc_pred neq0_conv)
+  done
+
+
+text \<open>To match the definition of @{const valof}, @{const Float_of_finite} does not check the triple for validity, this even applies to the lifted version from below. Hence, also special values like @{const Plus_infinity} can use this calculation.
+They are then interpreted wrongly, see below.\<close>
+
+section \<open>Possibly counter-intuitive behaviour\<close>
+
+--\<open>Val return a real even for infinite values:\<close>
+schematic_goal sg1: "Rep_float Plus_infinity = (?s, ?e, ?f)"
+  unfolding Plus_infinity_def
+  using is_valid_special Abs_float_inverse
+  apply simp
+  unfolding plus_infinity_def emax_def "expwidth.simps" float_format_def
+  apply simp
+  done
+schematic_goal "Val Plus_infinity = ?x"
+  unfolding Val_def sg1 float_format_def
+  apply simp
+  done
+
+section \<open>Float.float to IEEE.float\<close>
 
 (* Obacht! Stark negative Exponenten werden auch mit bias noch negativ sein.
   In eine representation dürfen aber nur natürliche Zahlen geschrieben werden...*)
@@ -61,7 +100,16 @@ lemma
   oops
 
 section \<open>Lifting important results\<close>
-(* Todo *)
+
+definition Float_of_Finite :: "IEEE.float \<Rightarrow> Float.float" where
+  "Float_of_Finite f = Float_of_finite float_format (Rep_float f)"
+
+lemma Float_of_Finite_correct: "real_of_float (Float_of_Finite f) = Val f"
+  unfolding Float_of_Finite_def Val_def
+  using Float_of_finite_correct[of float_format "Rep_float f"].
+
+(* Todo: expand *)
+
 
 definition ferr :: "format \<Rightarrow> roundmode \<Rightarrow> real \<Rightarrow> real"
 where "ferr x m a = valof x (round x m a) - a"
