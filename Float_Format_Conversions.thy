@@ -86,18 +86,71 @@ section \<open>Float.float to IEEE.float\<close>
 
 (* Obacht! Stark negative Exponenten werden auch mit bias noch negativ sein.
   In eine representation dürfen aber nur natürliche Zahlen geschrieben werden...*)
-definition float_format_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation" where
-  "float_format_of_Float x f =
-    (if 0 \<le> real_of_float f (*einfacher möglich?*) then 0 else 1,
+definition float_rep_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation"
+(*obtain a triple that, when interpreted as normalized IEEE.float,
+  has the same value*)
+where
+  "float_rep_of_Float x f =
+(*    (if 0 \<le> real_of_float f (*einfacher möglich?*) then 0 else 1,*)
+    (0, (* restrict to positives for now *)
     nat (Float.exponent f + int (bias x)),
     nat (\<bar>Float.mantissa f\<bar> - 1) * fracwidth x)"
-thm float_format_of_Float_def[simplified]
+thm float_rep_of_Float_def[simplified]
 
-lemma
-  shows "valof x (float_format_of_Float x f) = real_of_float f"
-  unfolding mantissa_exponent
-  apply (auto simp: float_format_of_Float_def)
+lemma "2 ^ (a::nat) = 2 powr (a::nat)"
+  try
+by (simp add: powr_realpow)
+
+lemma positive_correct:
+  assumes f_pos: "is_float_pos f" (*avoid special cases for now*)
+  assumes "Float.exponent f + int (bias x) > 0" (*make sure this can be converted to a nat without loss of information, also avoid the result being interpreted as subnormal number*)
+  shows "valof x (float_rep_of_Float x f) = real_of_float f"
+using assms
+proof -
+  have if_false: "\<not>nat
+         (Float.exponent f +
+          int (bias x)) =
+        0"
+        using assms(2) by linarith
+  have a: "?thesis \<longleftrightarrow> (- 1) ^ 0 *
+          (2 ^
+           nat
+            (Float.exponent f +
+             int (bias x)) /
+           2 ^ bias x) *
+          (1 +
+           real
+            (nat
+              (\<bar>mantissa f\<bar> - 1) *
+             fracwidth x) /
+           2 ^ fracwidth x) =
+    real_of_int (mantissa f) *
+    2 powr
+    real_of_int (Float.exponent f)"
+    using if_false float_rep_of_Float_def mantissa_exponent valof.simps by auto
+  have "mantissa f > 0"
+    by (metis Float.compute_is_float_pos Float_mantissa_exponent assms(1))
+  then have "\<bar>mantissa f\<bar> = mantissa f"
+    by simp
+  then have s2: "real (nat (\<bar>mantissa f\<bar> - 1)) = \<bar>mantissa f\<bar> - 1"
+    by (simp add: \<open>0 < mantissa f\<close> nat_0_le)
+  have s3: "\<bar>real_of_int (mantissa f)\<bar> = real_of_int (mantissa f)"
+    using \<open>0 < mantissa f\<close> by linarith
+  have s4: "real_of_int (mantissa f) - 1 = real_of_int (mantissa f - 1)"
+    by auto
+  show ?thesis
+    unfolding a
+  apply (simp add: s2)
+  apply (simp add: s3)
+  apply (simp add: divide_simps)
+  apply (simp add: powr_realpow powr_divide2[symmetric])
+  apply (simp add: field_simps)
+  apply simp
+  apply (simp add: divide_simps)
+  apply (auto simp: float_rep_of_Float_def)
   oops
+
+
 
 section \<open>Lifting important results\<close>
 
@@ -117,7 +170,7 @@ where "ferr x m a = valof x (round x m a) - a"
 term "truncate_down 53"
 
 lemma
-  shows "is_valid x (float_format_of_Float x f)" "is_finite x (float_format_of_Float x f)"
+  shows "is_valid x (float_rep_of_Float x f)" "is_finite x (float_rep_of_Float x f)"
   oops
 
 term threshold
