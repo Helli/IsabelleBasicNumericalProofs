@@ -94,16 +94,16 @@ where
 (*    (if 0 \<le> real_of_float f (*einfacher möglich?*) then 0 else 1,*)
     (0, (* restrict to positives for now *)
     nat (Float.exponent f + int (bias x)),
-    nat (\<bar>Float.mantissa f\<bar> - 1) * fracwidth x)"
+    nat (\<bar>Float.mantissa f\<bar> - 1) * 2 ^ fracwidth x)"
 thm float_rep_of_Float_def[simplified]
 
 lemma "2 ^ (a::nat) = 2 powr (a::nat)"
-  try
-by (simp add: powr_realpow)
-
+  by (simp add: powr_realpow)
+thm powr_realpow2
+value "2 powr (-1)"
 lemma positive_correct:
   assumes f_pos: "is_float_pos f" (*avoid special cases for now*)
-  assumes "Float.exponent f + int (bias x) > 0" (*make sure this can be converted to a nat without loss of information, also avoid the result being interpreted as subnormal number*)
+  assumes unavoidable: "Float.exponent f + int (bias x) > 0" (*make sure this can be converted to a nat without loss of information, also avoid the result being interpreted as subnormal number*)
   shows "valof x (float_rep_of_Float x f) = real_of_float f"
 using assms
 proof -
@@ -117,18 +117,19 @@ proof -
            nat
             (Float.exponent f +
              int (bias x)) /
-           2 ^ bias x) *
+           2 powr bias x) *
           (1 +
            real
             (nat
               (\<bar>mantissa f\<bar> - 1) *
-             fracwidth x) /
+             2 ^ fracwidth x) /
            2 ^ fracwidth x) =
     real_of_int (mantissa f) *
     2 powr
     real_of_int (Float.exponent f)"
-    using if_false float_rep_of_Float_def mantissa_exponent valof.simps by auto
-  have "mantissa f > 0"
+    using if_false float_rep_of_Float_def mantissa_exponent valof.simps powr_realpow
+    by auto
+  have m_greater: "mantissa f > 0"
     by (metis Float.compute_is_float_pos Float_mantissa_exponent assms(1))
   then have "\<bar>mantissa f\<bar> = mantissa f"
     by simp
@@ -136,20 +137,20 @@ proof -
     by (simp add: \<open>0 < mantissa f\<close> nat_0_le)
   have s3: "\<bar>real_of_int (mantissa f)\<bar> = real_of_int (mantissa f)"
     using \<open>0 < mantissa f\<close> by linarith
-  have s4: "real_of_int (mantissa f) - 1 = real_of_int (mantissa f - 1)"
-    by auto
+  have s4: "(real_of_int (Float.exponent f) + real (bias x)) = real_of_int (Float.exponent f + bias x)"
+    by simp
+find_theorems "real_of_int :: int \<Rightarrow> real"
   show ?thesis
     unfolding a
+find_theorems "op powr" "op +"
   apply (simp add: s2)
   apply (simp add: s3)
-  apply (simp add: divide_simps)
-  apply (simp add: powr_realpow powr_divide2[symmetric])
+find_theorems "op ^" "op +"
   apply (simp add: field_simps)
-  apply simp
-  apply (simp add: divide_simps)
-  apply (auto simp: float_rep_of_Float_def)
-  oops
-
+  apply (simp add: powr_add[symmetric])
+  unfolding s4
+by (smt powr_int unavoidable)
+qed
 
 
 section \<open>Lifting important results\<close>
