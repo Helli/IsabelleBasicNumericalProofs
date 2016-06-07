@@ -69,7 +69,7 @@ They are then interpreted wrongly, see below.\<close>
 
 section \<open>Possibly counter-intuitive behaviour\<close>
 
---\<open>Val return a real even for infinite values:\<close>
+--\<open>Val returns a real, even for special value input:\<close>
 schematic_goal sg1: "Rep_float Plus_infinity = (?s, ?e, ?f)"
   unfolding Plus_infinity_def
   using is_valid_special Abs_float_inverse
@@ -77,36 +77,30 @@ schematic_goal sg1: "Rep_float Plus_infinity = (?s, ?e, ?f)"
   unfolding plus_infinity_def emax_def "expwidth.simps" float_format_def
   apply simp
   done
-schematic_goal "Val Plus_infinity = ?x"
+schematic_goal sg2: "Val Plus_infinity = ?x"
   unfolding Val_def sg1 float_format_def
   apply simp
   done
 
+
 section \<open>Float.float to IEEE.float\<close>
 
-(* Obacht! Stark negative Exponenten werden auch mit bias noch negativ sein.
-  In eine representation dürfen aber nur natürliche Zahlen geschrieben werden...*)
 definition float_rep_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation"
-(*obtain a triple that, when interpreted as normalized IEEE.float,
-  has the same value*)
+(*obtain a triple that, when interpreted as normal IEEE.float, has the same value*)
 where
   "float_rep_of_Float x f =
-(*    (if 0 \<le> real_of_float f (*einfacher möglich?*) then 0 else 1,*)
-    (0, (* restrict to positives for now *)
+  (if is_float_pos f then 0 else 1,
     nat (Float.exponent f + int (bias x)),
     nat (\<bar>Float.mantissa f\<bar> - 1) * 2 ^ fracwidth x)"
 thm float_rep_of_Float_def[simplified]
 
-lemma "2 ^ (a::nat) = 2 powr (a::nat)"
-  by (simp add: powr_realpow)
-thm powr_realpow2
-value "2 powr (-1)"
-lemma positive_correct:
-  assumes f_pos: "is_float_pos f" (*avoid special cases for now*)
-  assumes unavoidable: "Float.exponent f + int (bias x) > 0" (*make sure this can be converted to a nat without loss of information, also avoid the result being interpreted as subnormal number*)
+lemma normal_correct:
+  assumes f_not_zero: "\<not>is_float_zero f" (*avoid that special case for now*)
+  assumes nat_transform: "Float.exponent f + int (bias x) > 0" (*make sure this can be converted to a nat without loss of information, also avoid the result being interpreted as subnormal number*)
   shows "valof x (float_rep_of_Float x f) = real_of_float f"
 using assms
-proof -
+proof  (cases "is_float_pos f")
+case True
   have if_false: "\<not>nat
          (Float.exponent f +
           int (bias x)) =
@@ -127,10 +121,10 @@ proof -
     real_of_int (mantissa f) *
     2 powr
     real_of_int (Float.exponent f)"
-    using if_false float_rep_of_Float_def mantissa_exponent valof.simps powr_realpow
-    by auto
+    using if_false float_rep_of_Float_def mantissa_exponent valof.simps powr_realpow 
+      by (simp add: True)
   have m_greater: "mantissa f > 0"
-    by (metis Float.compute_is_float_pos Float_mantissa_exponent assms(1))
+    by (metis Float.compute_is_float_pos Float_mantissa_exponent True)
   then have "\<bar>mantissa f\<bar> = mantissa f"
     by simp
   then have s2: "real (nat (\<bar>mantissa f\<bar> - 1)) = \<bar>mantissa f\<bar> - 1"
@@ -139,18 +133,53 @@ proof -
     using \<open>0 < mantissa f\<close> by linarith
   have s4: "(real_of_int (Float.exponent f) + real (bias x)) = real_of_int (Float.exponent f + bias x)"
     by simp
-find_theorems "real_of_int :: int \<Rightarrow> real"
   show ?thesis
     unfolding a
-find_theorems "op powr" "op +"
-  apply (simp add: s2)
-  apply (simp add: s3)
-find_theorems "op ^" "op +"
-  apply (simp add: field_simps)
-  apply (simp add: powr_add[symmetric])
+  apply (simp add: s2 s3 field_simps powr_add[symmetric])
   unfolding s4
-by (smt powr_int unavoidable)
+    by (smt powr_int nat_transform)
+next
+case False
+  have if_false: "\<not>nat
+         (Float.exponent f +
+          int (bias x)) =
+        0"
+        using assms(2) by linarith
+  have a: "?thesis \<longleftrightarrow>  (- 1) ^ 1 *
+          (2 ^
+           nat
+            (Float.exponent f +
+             int (bias x)) /
+           2 powr bias x) *
+          (1 +
+           real
+            (nat (\<bar>mantissa f\<bar> - 1) *
+             2 ^ fracwidth x) /
+           2 ^ fracwidth x) =
+    real_of_int (mantissa f) *
+    2 powr real_of_int (Float.exponent f)"
+    unfolding float_rep_of_Float_def valof.simps mantissa_exponent nat_transform
+    apply (simp add: False)
+    using nat_transform powr_realpow by auto
+  have m_greater: "mantissa f < 0"
+    by (smt False Float.compute_is_float_pos Float.compute_is_float_zero Float_mantissa_exponent f_not_zero)
+  then have "\<bar>mantissa f\<bar> = - mantissa f"
+    by simp
+  then have s2: "real (nat (\<bar>mantissa f\<bar> - 1)) = - mantissa f - 1"
+    by (simp add: \<open>0 > mantissa f\<close> nat_0_le)
+  have s3: "\<bar>real_of_int (mantissa f)\<bar> = - real_of_int (mantissa f)"
+    using \<open>0 > mantissa f\<close> by linarith
+  have s4: "(real_of_int (Float.exponent f) + real (bias x)) = real_of_int (Float.exponent f + bias x)" by simp
+  show ?thesis
+    unfolding a
+  apply (simp add: s2 s3 field_simps powr_add[symmetric])
+  unfolding s4
+    by (smt powr_int nat_transform)
 qed
+
+(* ToDo: Extend to zero-floats *)
+value "exponent 0"
+value "mantissa 0"
 
 
 section \<open>Lifting important results\<close>
