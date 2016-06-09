@@ -85,19 +85,19 @@ schematic_goal sg2: "Val Plus_infinity = ?x"
 
 section \<open>Float.float to IEEE.float\<close>
 
-definition float_rep_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation"
+definition normal_rep_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation"
 (*obtain a triple that, when interpreted as normal IEEE.float, has the same value*)
 where
-  "float_rep_of_Float x f =
+  "normal_rep_of_Float x f =
   (if is_float_pos f then 0 else 1,
     nat (Float.exponent f + int (bias x)),
     nat (\<bar>Float.mantissa f\<bar> - 1) * 2 ^ fracwidth x)"
-thm float_rep_of_Float_def[simplified]
+thm normal_rep_of_Float_def[simplified]
 
 lemma normal_correct:
   assumes f_not_zero: "\<not>is_float_zero f" (*avoid that special case for now*)
   assumes nat_transform: "Float.exponent f + int (bias x) > 0" (*make sure this can be converted to a nat without loss of information, also avoid the result being interpreted as subnormal number*)
-  shows "valof x (float_rep_of_Float x f) = real_of_float f"
+  shows "valof x (normal_rep_of_Float x f) = real_of_float f"
 using assms
 proof  (cases "is_float_pos f")
 case True
@@ -105,7 +105,7 @@ case True
          (Float.exponent f +
           int (bias x)) =
         0"
-        using assms(2) by linarith
+        using nat_transform by linarith
   have a: "?thesis \<longleftrightarrow> (- 1) ^ 0 *
           (2 ^
            nat
@@ -121,7 +121,7 @@ case True
     real_of_int (mantissa f) *
     2 powr
     real_of_int (Float.exponent f)"
-    using if_false float_rep_of_Float_def mantissa_exponent valof.simps powr_realpow 
+    using if_false normal_rep_of_Float_def mantissa_exponent valof.simps powr_realpow 
       by (simp add: True)
   have m_greater: "mantissa f > 0"
     by (metis Float.compute_is_float_pos Float_mantissa_exponent True)
@@ -144,7 +144,7 @@ case False
          (Float.exponent f +
           int (bias x)) =
         0"
-        using assms(2) by linarith
+        using nat_transform by linarith
   have a: "?thesis \<longleftrightarrow>  (- 1) ^ 1 *
           (2 ^
            nat
@@ -158,7 +158,7 @@ case False
            2 ^ fracwidth x) =
     real_of_int (mantissa f) *
     2 powr real_of_int (Float.exponent f)"
-    unfolding float_rep_of_Float_def valof.simps mantissa_exponent nat_transform
+    unfolding normal_rep_of_Float_def valof.simps mantissa_exponent nat_transform
     apply (simp add: False)
     using nat_transform powr_realpow by auto
   have m_greater: "mantissa f < 0"
@@ -177,10 +177,27 @@ case False
     by (smt powr_int nat_transform)
 qed
 
+definition rep_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation" where
+  "rep_of_Float x f = (
+    if is_float_zero f
+      then (0,0,0)
+      else normal_rep_of_Float x f
+  )"
+value "valof float_format (0,0,0)"
+lemma
+  assumes nat_transform: "Float.exponent f + int (bias x) > 0" (*make sure this can be converted to a nat without loss of information, also avoid the result being interpreted as subnormal number*)
+  shows "valof x (rep_of_Float x f) = real_of_float f"
+apply (cases "is_float_zero f")
+try
+
 (* ToDo: Extend to zero-floats *)
 value "exponent 0"
 value "mantissa 0"
+(*ToDo: lemmas about transforming twice? *)
 
+(*ToDo: Does this terminate?
+value "normal_rep_of_Float float_format (Float 3 2)"
+*)
 
 section \<open>Lifting important results\<close>
 
