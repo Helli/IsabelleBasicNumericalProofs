@@ -94,7 +94,7 @@ where
     nat (\<bar>Float.mantissa f\<bar> - 1) * 2 ^ fracwidth x)"
 thm normal_rep_of_Float_def[simplified]
 
-lemma normal_correct:
+lemma normal_rep_of_Float_correct:
   assumes f_not_zero: "\<not>is_float_zero f" (*avoid that special case for now*)
   assumes nat_transform: "Float.exponent f + int (bias x) > 0" (*make sure this can be converted to a nat without loss of information, also avoid the result being interpreted as subnormal number*)
   shows "valof x (normal_rep_of_Float x f) = real_of_float f"
@@ -183,14 +183,13 @@ definition rep_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> repre
       then (0,0,0)
       else normal_rep_of_Float x f
   )"
-value "valof float_format (0,0,0)"
-lemma
-  assumes nat_transform: "Float.exponent f + int (bias x) > 0" (*make sure this can be converted to a nat without loss of information, also avoid the result being interpreted as subnormal number*)
-  shows "valof x (rep_of_Float x f) = real_of_float f"
-apply (cases "is_float_zero f")
-try
 
-(* ToDo: Extend to zero-floats *)
+lemma rep_of_Float_correct:
+  assumes nat_transform: "Float.exponent f + int (bias x) > 0"
+  shows "valof x (rep_of_Float x f) = real_of_float f"
+unfolding rep_of_Float_def
+by (simp add: is_float_zero.rep_eq nat_transform normal_rep_of_Float_correct)
+
 value "exponent 0"
 value "mantissa 0"
 (*ToDo: lemmas about transforming twice? *)
