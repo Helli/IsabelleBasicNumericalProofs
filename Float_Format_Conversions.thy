@@ -177,6 +177,102 @@ case False
     by (smt powr_int nat_transform)
 qed
 
+definition normal_rep_of_Float' :: "format \<Rightarrow> Float.float \<Rightarrow> representation"
+(* This version needs an extra assumption, but can produce uneven mantissas*)
+where
+  "normal_rep_of_Float' x f =
+  (if is_float_pos f then 0 else 1,
+    nat (Float.exponent f + int (bias x) + int (fracwidth x)),
+    nat (\<bar>Float.mantissa f\<bar> - 2 ^ fracwidth x))"
+
+lemma normal_rep_of_Float'_correct:
+  assumes f_not_zero: "\<not>is_float_zero f"
+  assumes special_transform: "0 < \<bar>Float.mantissa f\<bar> - 2 ^ fracwidth x"
+  assumes nat_transform: "Float.exponent f + int (bias x) + int (fracwidth x) > 0" (*make sure this can be converted to a nat without loss of information, also avoid the result being interpreted as subnormal number*)
+  shows "valof x (normal_rep_of_Float' x f) = real_of_float f"
+using assms
+proof  (cases "is_float_pos f")
+case True
+  have if_false: "\<not>nat
+         (Float.exponent f +
+          int (bias x) + int (fracwidth x)) =
+        0"
+        using nat_transform by linarith
+  have a: "?thesis \<longleftrightarrow> (- 1) ^ 0 *
+          (2 ^
+           nat
+            (Float.exponent f +
+             int (bias x) + int (fracwidth x)) /
+           2 powr bias x) *
+          (1 +
+           real
+            (nat
+              (\<bar>mantissa f\<bar> - 2 ^ fracwidth x)) /
+           2 ^ fracwidth x) =
+    real_of_int (mantissa f) *
+    2 powr
+    real_of_int (Float.exponent f)"
+    using if_false normal_rep_of_Float'_def mantissa_exponent valof.simps powr_realpow 
+      by (simp add: True)
+  have m_greater: "mantissa f > 0"
+    by (metis Float.compute_is_float_pos Float_mantissa_exponent True)
+  then have "\<bar>mantissa f\<bar> = mantissa f"
+    by simp
+  then have s2: "real (nat (\<bar>mantissa f\<bar> - 2 ^ fracwidth x))
+    = \<bar>mantissa f\<bar> - 2 ^ fracwidth x"
+    using special_transform by auto
+  have s3: "\<bar>real_of_int (mantissa f)\<bar> = real_of_int (mantissa f)"
+    using \<open>0 < mantissa f\<close> by linarith
+  have s4: "(real_of_int (Float.exponent f) + (real (fracwidth x) + real (bias x)))
+    = real_of_int (Float.exponent f + bias x + fracwidth x)"
+    by simp
+  show ?thesis
+    unfolding a
+  apply (simp add: s2 s3)
+  apply (simp add: divide_simps powr_realpow[symmetric] powr_add[symmetric])
+  unfolding s4
+  using nat_transform by auto
+next
+case False
+  have if_false: "\<not>nat
+         (Float.exponent f +
+          int (bias x) + fracwidth x) =
+        0"
+        using nat_transform by linarith
+  have a: "?thesis \<longleftrightarrow>  (- 1) ^ 1 *
+          (2 ^
+           nat
+            (Float.exponent f +
+             int (bias x) + fracwidth x) /
+           2 powr bias x) *
+          (1 +
+           real
+            (nat (\<bar>mantissa f\<bar> -
+             2 ^ fracwidth x)) /
+           2 ^ fracwidth x) =
+    real_of_int (mantissa f) *
+    2 powr real_of_int (Float.exponent f)"
+    unfolding normal_rep_of_Float'_def valof.simps mantissa_exponent nat_transform
+    apply (simp add: False)
+    using nat_transform powr_realpow by auto
+  have m_smaller: "mantissa f < 0"
+    by (smt False Float.compute_is_float_pos Float.compute_is_float_zero Float_mantissa_exponent f_not_zero)
+  then have "\<bar>mantissa f\<bar> = - mantissa f"
+    by simp
+  then have s2: "real (nat (\<bar>mantissa f\<bar> - 2 ^ fracwidth x)) = - mantissa f - 2 ^ fracwidth x"
+    using special_transform by auto
+  have s3: "\<bar>real_of_int (mantissa f)\<bar> = - real_of_int (mantissa f)"
+    using \<open>0 > mantissa f\<close> by linarith
+  have s4: "(real_of_int (Float.exponent f) + (real (bias x) + real (fracwidth x)))
+    = real_of_int (Float.exponent f + bias x + fracwidth x)"
+    by simp
+  show ?thesis
+    unfolding a
+  apply (simp add: s2 s3 divide_simps powr_realpow[symmetric] powr_add[symmetric])
+  unfolding s4
+  using nat_transform by auto
+qed
+
 definition rep_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation" where
   "rep_of_Float x f = (
     if is_float_zero f
