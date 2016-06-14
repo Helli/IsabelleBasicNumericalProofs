@@ -161,12 +161,12 @@ case False
     unfolding normal_rep_of_Float_def valof.simps mantissa_exponent nat_transform
     apply (simp add: False)
     using nat_transform powr_realpow by auto
-  have m_greater: "mantissa f < 0"
+  have "mantissa f < 0"
     by (smt False Float.compute_is_float_pos Float.compute_is_float_zero Float_mantissa_exponent f_not_zero)
-  then have "\<bar>mantissa f\<bar> = - mantissa f"
+  moreover then have "\<bar>mantissa f\<bar> = - mantissa f"
     by simp
-  then have s2: "real (nat (\<bar>mantissa f\<bar> - 1)) = - mantissa f - 1"
-    by (simp add: \<open>0 > mantissa f\<close> nat_0_le)
+  ultimately have s2: "real (nat (\<bar>mantissa f\<bar> - 1)) = - mantissa f - 1"
+    by (simp add: nat_0_le)
   have s3: "\<bar>real_of_int (mantissa f)\<bar> = - real_of_int (mantissa f)"
     using \<open>0 > mantissa f\<close> by linarith
   have s4: "(real_of_int (Float.exponent f) + real (bias x)) = real_of_int (Float.exponent f + bias x)" by simp
@@ -288,7 +288,10 @@ by (simp add: is_float_zero.rep_eq nat_transform normal_rep_of_Float_correct)
 
 value "exponent 0"
 value "mantissa 0"
-(*ToDo: lemmas about transforming twice? *)
+(*ToDo:
+  lemmas about transforming twice?
+  (make sure we get the same value back for normal IEEE.floats?)
+*)
 
 (*ToDo: Does this terminate?
 value "normal_rep_of_Float float_format (Float 3 2)"
