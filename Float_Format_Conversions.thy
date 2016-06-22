@@ -177,42 +177,39 @@ case False
     by (smt powr_int nat_transform)
 qed
 
-definition normal_rep_of_Float' :: "format \<Rightarrow> Float.float \<Rightarrow> representation"
+definition normal_rep_of_Float' (* :: "format \<Rightarrow> Float.float \<Rightarrow> int \<Rightarrow> representation"*)
 (* This version needs an extra assumption, but can produce uneven mantissas*)
 where
   "normal_rep_of_Float' x f =
+  "normal_rep_of_Float' x b f =
   (if is_float_pos f then 0 else 1,
-    nat (Float.exponent f + int (bias x) + int (fracwidth x)),
-    nat (\<bar>Float.mantissa f\<bar> - 2 ^ fracwidth x))"
+    nat (Float.exponent f + int (bias x) + b),
+    nat (\<bar>Float.mantissa f\<bar> - 2 ^ (fracwidth x - b)))"
+thm normal_rep_of_Float'_def[simplified]
 
 lemma normal_rep_of_Float'_correct:
   assumes f_not_zero: "\<not>is_float_zero f"
-  assumes special_transform: "0 < \<bar>Float.mantissa f\<bar> - 2 ^ fracwidth x"
-  assumes nat_transform: "Float.exponent f + int (bias x) + int (fracwidth x) > 0" (*make sure this can be converted to a nat without loss of information, also avoid the result being interpreted as subnormal number*)
-  shows "valof x (normal_rep_of_Float' x f) = real_of_float f"
+  assumes special_transform: "0 < \<bar>Float.mantissa f\<bar> - 2 ^ b"
+  assumes nat_transform: "Float.exponent f + int (bias x) + b > 0" (*make sure this can be converted to a nat without loss of information, also avoid the result being interpreted as subnormal number*)
+  shows "valof x (normal_rep_of_Float' x b f) = real_of_float f"
 using assms
 proof  (cases "is_float_pos f")
 case True
   have if_false: "\<not>nat
          (Float.exponent f +
-          int (bias x) + int (fracwidth x)) =
+          int (bias x) + b) =
         0"
         using nat_transform by linarith
-  have a: "?thesis \<longleftrightarrow> (- 1) ^ 0 *
-          (2 ^
-           nat
-            (Float.exponent f +
-             int (bias x) + int (fracwidth x)) /
-           2 powr bias x) *
-          (1 +
-           real
-            (nat
-              (\<bar>mantissa f\<bar> - 2 ^ fracwidth x)) /
-           2 ^ fracwidth x) =
+  have a: "?thesis \<longleftrightarrow>
+    (- 1) ^ 0 *
+    (2 ^ nat (Float.exponent f + int (bias x) + b) / 2 powr bias x) *
+    (1 + real (nat (\<bar>mantissa f\<bar> - 2 ^ b)) / 2 ^ b)
+    =
     real_of_int (mantissa f) *
     2 powr
     real_of_int (Float.exponent f)"
-    using if_false normal_rep_of_Float'_def mantissa_exponent valof.simps powr_realpow 
+    using if_false normal_rep_of_Float'_def mantissa_exponent valof.simps powr_realpow
+      apply (simp add: True)
       by (simp add: True)
   have m_greater: "mantissa f > 0"
     by (metis Float.compute_is_float_pos Float_mantissa_exponent True)
@@ -277,7 +274,7 @@ definition float_rep_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow>
   "float_rep_of_Float x f = (
     if is_float_zero f
       then (0,0,0)
-      else normal_rep_of_Float x f
+      else normal_rep_of_Float' x f
   )"
 
 lemma float_rep_of_Float_correct:
