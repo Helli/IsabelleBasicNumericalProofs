@@ -273,17 +273,17 @@ case False
   using nat_transform by auto
 qed
 
-definition rep_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation" where
-  "rep_of_Float x f = (
+definition float_rep_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation" where
+  "float_rep_of_Float x f = (
     if is_float_zero f
       then (0,0,0)
       else normal_rep_of_Float x f
   )"
 
-lemma rep_of_Float_correct:
+lemma float_rep_of_Float_correct:
   assumes nat_transform: "Float.exponent f + int (bias x) > 0"
-  shows "valof x (rep_of_Float x f) = real_of_float f"
-unfolding rep_of_Float_def
+  shows "valof x (float_rep_of_Float x f) = real_of_float f"
+unfolding float_rep_of_Float_def
 by (simp add: is_float_zero.rep_eq nat_transform normal_rep_of_Float_correct)
 
 value "exponent 0"
@@ -315,8 +315,11 @@ where "ferr x m a = valof x (round x m a) - a"
 term "truncate_down 53"
 
 lemma
-  shows "is_valid x (float_rep_of_Float x f)" "is_finite x (float_rep_of_Float x f)"
-  oops
+  shows "is_valid x (float_rep_of_Float x f)"
+  (*and "is_finite x (float_rep_of_Float x f)"*)
+unfolding is_valid_def float_rep_of_Float_def normal_rep_of_Float_def
+  apply simp
+  oops (*\<bar>mantissa f\<bar> \<le> 1 ? Need another approach for the conversion*)
 
 term threshold
 lemma closest_eq:
