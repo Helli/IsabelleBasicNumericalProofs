@@ -106,22 +106,14 @@ case True
           int (bias x)) =
         0"
         using nat_transform by linarith
-  have a: "?thesis \<longleftrightarrow> (- 1) ^ 0 *
-          (2 ^
-           nat
-            (Float.exponent f +
-             int (bias x)) /
-           2 powr bias x) *
-          (1 +
-           real
-            (nat
-              (\<bar>mantissa f\<bar> - 1) *
-             2 ^ fracwidth x) /
-           2 ^ fracwidth x) =
+  have a: "?thesis \<longleftrightarrow>
+    (- 1) ^ 0 *
+    (2 ^ nat (Float.exponent f + int (bias x)) / 2 powr bias x) *
+    (1 + real (nat (\<bar>mantissa f\<bar> - 1) * 2 ^ fracwidth x) / 2 ^ fracwidth x)
+    =
     real_of_int (mantissa f) *
-    2 powr
-    real_of_int (Float.exponent f)"
-    using if_false normal_rep_of_Float_def mantissa_exponent valof.simps powr_realpow 
+    2 powr real_of_int (Float.exponent f)"
+    using if_false normal_rep_of_Float_def mantissa_exponent valof.simps powr_realpow
       by (simp add: True)
   have m_greater: "mantissa f > 0"
     by (metis Float.compute_is_float_pos Float_mantissa_exponent True)
@@ -145,17 +137,11 @@ case False
           int (bias x)) =
         0"
         using nat_transform by linarith
-  have a: "?thesis \<longleftrightarrow>  (- 1) ^ 1 *
-          (2 ^
-           nat
-            (Float.exponent f +
-             int (bias x)) /
-           2 powr bias x) *
-          (1 +
-           real
-            (nat (\<bar>mantissa f\<bar> - 1) *
-             2 ^ fracwidth x) /
-           2 ^ fracwidth x) =
+  have a: "?thesis \<longleftrightarrow>
+    (- 1) ^ 1 *
+    (2 ^ nat (Float.exponent f + int (bias x)) / 2 powr bias x) *
+    (1 + real (nat (\<bar>mantissa f\<bar> - 1) * 2 ^ fracwidth x) / 2 ^ fracwidth x)
+    =
     real_of_int (mantissa f) *
     2 powr real_of_int (Float.exponent f)"
     unfolding normal_rep_of_Float_def valof.simps mantissa_exponent nat_transform
@@ -198,21 +184,14 @@ case True
           int (bias x) + int (fracwidth x)) =
         0"
         using nat_transform by linarith
-  have a: "?thesis \<longleftrightarrow> (- 1) ^ 0 *
-          (2 ^
-           nat
-            (Float.exponent f +
-             int (bias x) + int (fracwidth x)) /
-           2 powr bias x) *
-          (1 +
-           real
-            (nat
-              (\<bar>mantissa f\<bar> - 2 ^ fracwidth x)) /
-           2 ^ fracwidth x) =
+  have a: "?thesis \<longleftrightarrow>
+    (- 1) ^ 0 *
+    (2 ^ nat (Float.exponent f + int (bias x) + int (fracwidth x)) / 2 powr bias x) *
+    (1 + real (nat (\<bar>mantissa f\<bar> - 2 ^ fracwidth x)) / 2 ^ fracwidth x)
+    =
     real_of_int (mantissa f) *
-    2 powr
-    real_of_int (Float.exponent f)"
-    using if_false normal_rep_of_Float'_def mantissa_exponent valof.simps powr_realpow 
+    2 powr real_of_int (Float.exponent f)"
+    using if_false normal_rep_of_Float'_def mantissa_exponent valof.simps powr_realpow
       by (simp add: True)
   have m_greater: "mantissa f > 0"
     by (metis Float.compute_is_float_pos Float_mantissa_exponent True)
@@ -239,17 +218,11 @@ case False
           int (bias x) + fracwidth x) =
         0"
         using nat_transform by linarith
-  have a: "?thesis \<longleftrightarrow>  (- 1) ^ 1 *
-          (2 ^
-           nat
-            (Float.exponent f +
-             int (bias x) + fracwidth x) /
-           2 powr bias x) *
-          (1 +
-           real
-            (nat (\<bar>mantissa f\<bar> -
-             2 ^ fracwidth x)) /
-           2 ^ fracwidth x) =
+  have a: "?thesis \<longleftrightarrow>
+    (- 1) ^ 1 *
+    (2 ^ nat (Float.exponent f + int (bias x) + fracwidth x) / 2 powr bias x) *
+    (1 + real (nat (\<bar>mantissa f\<bar> - 2 ^ fracwidth x)) / 2 ^ fracwidth x)
+    =
     real_of_int (mantissa f) *
     2 powr real_of_int (Float.exponent f)"
     unfolding normal_rep_of_Float'_def valof.simps mantissa_exponent nat_transform
