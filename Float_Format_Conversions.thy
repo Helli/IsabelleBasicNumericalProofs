@@ -170,10 +170,11 @@ where
   (if is_float_pos f then 0 else 1,
     nat (Float.exponent f + int (bias x) + int (fracwidth x)),
     nat (\<bar>Float.mantissa f\<bar> - 2 ^ fracwidth x))"
+thm normal_rep_of_Float'_def[simplified]
 
 lemma normal_rep_of_Float'_correct:
   assumes f_not_zero: "\<not>is_float_zero f"
-  assumes special_transform: "0 < \<bar>Float.mantissa f\<bar> - 2 ^ fracwidth x"
+  assumes special_transform: "0 \<le> \<bar>Float.mantissa f\<bar> - 2 ^ fracwidth x"
   assumes nat_transform: "Float.exponent f + int (bias x) + int (fracwidth x) > 0" (*make sure this can be converted to a nat without loss of information, also avoid the result being interpreted as subnormal number*)
   shows "valof x (normal_rep_of_Float' x f) = real_of_float f"
 using assms
@@ -258,6 +259,21 @@ lemma float_rep_of_Float_correct:
   shows "valof x (float_rep_of_Float x f) = real_of_float f"
 unfolding float_rep_of_Float_def
 by (simp add: is_float_zero.rep_eq nat_transform normal_rep_of_Float_correct)
+
+definition normal_rep_of_Float_b
+where
+  "normal_rep_of_Float_b x b f =
+  (if is_float_pos f then 0 else 1,
+    nat (Float.exponent f + int (bias x) + b),
+    nat (\<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x))"
+(*Todo: 2^fracwidth ausklammern? \<longrightarrow> drinnen kein int mehr?*)
+thm normal_rep_of_Float_b_def[simplified]
+
+lemma normal_rep_of_Float_b_correct:
+  assumes f_not_zero: "\<not>is_float_zero f"
+  assumes special_transform: "0 \<le> \<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x"
+  assumes nat_transform: "Float.exponent f + int (bias x) + int b > 0"
+  shows "valof x (normal_rep_of_Float_b x b f) = real_of_float f"
 
 value "exponent 0"
 value "mantissa 0"
