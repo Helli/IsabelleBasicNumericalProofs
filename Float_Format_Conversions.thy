@@ -260,7 +260,7 @@ lemma float_rep_of_Float_correct:
 unfolding float_rep_of_Float_def
 by (simp add: is_float_zero.rep_eq nat_transform normal_rep_of_Float_correct)
 
-definition normal_rep_of_Float_b
+definition normal_rep_of_Float_b :: "format \<Rightarrow> nat \<Rightarrow> Float.float \<Rightarrow> representation"
 where
   "normal_rep_of_Float_b x b f =
   (if is_float_pos f then 0 else 1,
@@ -270,10 +270,85 @@ where
 thm normal_rep_of_Float_b_def[simplified]
 
 lemma normal_rep_of_Float_b_correct:
+  fixes b :: nat
   assumes f_not_zero: "\<not>is_float_zero f"
-  assumes special_transform: "0 \<le> \<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x"
-  assumes nat_transform: "Float.exponent f + int (bias x) + int b > 0"
+  assumes nat_transform: "0 < Float.exponent f + int (bias x) + int b"
+  and special_transform: "0 \<le> \<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x"
+  and yet_another_assumption: "fracwidth x \<ge> b"
   shows "valof x (normal_rep_of_Float_b x b f) = real_of_float f"
+using assms
+proof  (cases "is_float_pos f")
+case True
+  have if_false: "\<not>nat (Float.exponent f + int (bias x) + b) = 0"
+        using nat_transform by linarith
+  have a: "?thesis \<longleftrightarrow>
+    2 ^ nat (Float.exponent f + int (bias x) + int b) *
+    (1 + real (nat (\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x)) / 2 ^ fracwidth x) /
+    2 ^ bias x
+    =
+    real_of_int (mantissa f) *
+    2 powr real_of_int (Float.exponent f)"
+    using if_false normal_rep_of_Float_b_def mantissa_exponent valof.simps powr_realpow
+      by (simp add: True)
+  have m_greater: "mantissa f > 0"
+    by (metis Float.compute_is_float_pos Float_mantissa_exponent True)
+  then have "\<bar>mantissa f\<bar> = mantissa f"
+    by simp
+  then have s2: "real (nat (\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x))
+    = \<bar>mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x"
+    using special_transform by auto
+  have s3: "\<bar>real_of_int (mantissa f)\<bar> = real_of_int (mantissa f)"
+    using \<open>0 < mantissa f\<close> by linarith
+  have s4: "(real_of_int (Float.exponent f) + (real (fracwidth x) + real (bias x)))
+    = real_of_int (Float.exponent f + bias x + fracwidth x)"
+    by simp
+  have s5: "real (nat (Float.exponent f + int (bias x) + int b)) + real (fracwidth x - b)
+    = real_of_int (Float.exponent f + int (bias x) + int (fracwidth x))"
+     using if_false yet_another_assumption by linarith
+  show ?thesis
+    unfolding a
+  apply (simp add: s2)
+  apply (simp add: s3)
+  apply (simp add: divide_simps powr_realpow[symmetric] powr_add[symmetric])
+  unfolding s4 s5
+    by simp
+next
+case False
+  have if_false: "nat (Float.exponent f + int (bias x) + int b) \<noteq> 0"
+        using nat_transform by linarith
+  have a: "?thesis \<longleftrightarrow>
+    - (2 ^ nat (Float.exponent f + int (bias x) + int b) *
+    (1 + real (nat (\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x)) / 2 ^ fracwidth x) /
+    2 ^ bias x)
+    =
+    real_of_int (mantissa f) *
+    2 powr real_of_int (Float.exponent f)"
+    using if_false normal_rep_of_Float_b_def mantissa_exponent valof.simps powr_realpow
+      by (simp add: False)
+  have m_smaller: "mantissa f < 0"
+    by (smt False Float.compute_is_float_pos Float.compute_is_float_zero Float_mantissa_exponent f_not_zero)
+  then have "\<bar>mantissa f\<bar> = - mantissa f"
+    by simp
+  then have s2: "real (nat (\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x))
+    = \<bar>mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x"
+    using special_transform by auto
+  have s3: "\<bar>real_of_int (mantissa f)\<bar> = - real_of_int (mantissa f)"
+    using \<open>0 > mantissa f\<close> by linarith
+  have s4: "(real_of_int (Float.exponent f) + (real (fracwidth x) + real (bias x)))
+    = real_of_int (Float.exponent f + bias x + fracwidth x)"
+    by simp
+  have s5: "real (nat (Float.exponent f + int (bias x) + int b)) + real (fracwidth x - b)
+    = real_of_int (Float.exponent f + int (bias x) + int (fracwidth x))"
+     using if_false yet_another_assumption by linarith
+  show ?thesis
+    unfolding a
+  apply (simp add: s2)
+  apply (simp add: s3)
+  apply (simp add: divide_simps powr_realpow[symmetric] powr_add[symmetric])
+  unfolding s4 s5
+    by simp
+qed
+
 
 value "exponent 0"
 value "mantissa 0"
