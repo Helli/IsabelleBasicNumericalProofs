@@ -266,7 +266,7 @@ where
   (if is_float_pos f then 0 else 1,
     nat (Float.exponent f + int (bias x) + b),
     nat (\<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x))"
-(*Todo: 2^fracwidth ausklammern? \<longrightarrow> drinnen kein int mehr?*)
+(*Todo: 2^fracwidth ausklammern? \<longrightarrow> Dann aber drinnen kein int mehr?*)
 thm normal_rep_of_Float_b_def[simplified]
 
 lemma normal_rep_of_Float_b_correct:
@@ -349,6 +349,35 @@ case False
     by simp
 qed
 
+lemma replace_special_transform: "i < 2 ^ nat (bitlen i)"
+  using bitlen_bounds bitlen_def by auto
+
+lemma normal_rep_of_Float_bitlen:
+  assumes "- int (bias x) < exponent f"
+  and "Float.exponent f + int (bias x) + fracwidth x < 2^(expwidth x)"
+  defines "r \<equiv> float_rep_of_Float_b (bitlen x) x f"
+  shows "valof x r = real_of_float f"
+  and "is_valid x r"
+
+definition float_rep_of_Float_b :: "format \<Rightarrow> Float.float \<Rightarrow> representation" where
+  "float_rep_of_Float_b x f = (
+    if is_float_zero f
+      then (0,0,0)
+      else normal_rep_of_Float_b x (nat (bitlen \<bar>mantissa f\<bar>)) f
+  )"
+
+lemma float_rep_of_Float_b_correct:
+  assumes nat_transform: "Float.exponent f + int (bias x) > 0"
+  shows "valof x (float_rep_of_Float_b x f) = real_of_float f"
+unfolding float_rep_of_Float_b_def
+  by (simp add: is_float_zero.rep_eq nat_transform normal_rep_of_Float_b_correct)
+
+lemma float_rep_of_Float_superb:
+  (*s. Zettel N\<degree> 1337*)
+  fixes x f
+  defines "r \<equiv> float_rep_of_Float_b x f"
+  shows "valof x r = real_of_float f"
+  and "is_valid x r"
 
 value "exponent 0"
 value "mantissa 0"
