@@ -349,20 +349,38 @@ case False
     by simp
 qed
 
-lemma replace_special_transform: "i < 2 ^ nat (bitlen i)"
-  using bitlen_bounds bitlen_def by auto
+lemma replace_from_special_transform: "\<bar>i\<bar> < 2 ^ nat (bitlen \<bar>i\<bar>)"
+by (metis (full_types) bitlen_bounds bitlen_def less_le_trans linorder_not_less nat_0 not_one_le_zero power_0)
+
+lemma better: "i \<noteq> 0 \<Longrightarrow> 2 powr -bitlen \<bar>i\<bar> < \<bar>i\<bar>"
+  by (smt abs_real_le_2_powr_bitlen of_int_less_1_iff of_int_minus powr_less_cancel_iff powr_zero_eq_one)
+
+lemma even_better: "\<bar>i\<bar> / 2 ^ nat (bitlen \<bar>i\<bar>) < 1"
+by (metis (no_types, hide_lams) abs_if divide_less_eq_1_neg divide_less_eq_1_pos not_numeral_less_one one_less_numeral_iff real_of_int_less_numeral_power_cancel_iff replace_from_special_transform semiring_norm(76) zero_less_numeral zero_less_power_abs_iff)
+
+value "(5::int) - (6::nat)"
+value "2 ^ -bitlen \<bar>4\<bar>"
 
 lemma normal_rep_of_Float_bitlen:
+(*Problem: Why doesn't special_transform follow from the other assumptions?\<dots>*)
+  assumes special_transform: "0 \<le> \<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - bitlen (mantissa f)) - 2 ^ fracwidth x"
+(*...It is possible to conclude yet_... from this (after fixing the type), but not the other way around as it should be? *)
   assumes "\<not>is_float_zero f"
   assumes "-int (bias x) < exponent f"
   and "Float.exponent f + int (bias x) + fracwidth x < 2^(expwidth x)"
-  defines "r \<equiv> normal_rep_of_Float_b x (nat (bitlen (mantissa f))) f"
+  defines "r \<equiv> normal_rep_of_Float_b x (nat (bitlen \<bar>mantissa f\<bar>)) f"
   shows "valof x r = real_of_float f"
   and "is_valid x r"
 unfolding r_def
 apply (rule normal_rep_of_Float_b_correct)
   apply fact
-  using assms(2) apply auto[1]
+  using assms(3) apply auto[1]
+  apply (simp add: divide_simps)
+using even_better[of "mantissa f"]
+  sledgehammer
+  using replace_special_transform
+
+  apply (simp add: assms(1) dual_order.strict_implies_order nat_le_iff)
 
 definition float_rep_of_Float_b :: "format \<Rightarrow> Float.float \<Rightarrow> representation" where
   "float_rep_of_Float_b x f = (
