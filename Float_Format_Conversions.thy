@@ -353,11 +353,16 @@ lemma replace_special_transform: "i < 2 ^ nat (bitlen i)"
   using bitlen_bounds bitlen_def by auto
 
 lemma normal_rep_of_Float_bitlen:
-  assumes "- int (bias x) < exponent f"
+  assumes "\<not>is_float_zero f"
+  assumes "-int (bias x) < exponent f"
   and "Float.exponent f + int (bias x) + fracwidth x < 2^(expwidth x)"
-  defines "r \<equiv> float_rep_of_Float_b (bitlen x) x f"
+  defines "r \<equiv> normal_rep_of_Float_b x (nat (bitlen (mantissa f))) f"
   shows "valof x r = real_of_float f"
   and "is_valid x r"
+unfolding r_def
+apply (rule normal_rep_of_Float_b_correct)
+  apply fact
+  using assms(2) apply auto[1]
 
 definition float_rep_of_Float_b :: "format \<Rightarrow> Float.float \<Rightarrow> representation" where
   "float_rep_of_Float_b x f = (
