@@ -360,10 +360,13 @@ by (metis (no_types, hide_lams) abs_if divide_less_eq_1_neg divide_less_eq_1_pos
 
 value "(5::int) - (6::nat)"
 value "2 ^ -bitlen \<bar>4\<bar>"
+value "mantissa (Float (-1) (-1))"
+lemma "fst x \<noteq> 0 \<Longrightarrow> snd x \<noteq> 0 \<Longrightarrow> fracwidth x \<ge> bitlen \<bar>mantissa f\<bar>\<Longrightarrow> 0 \<le> \<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar>)) - 2 ^ fracwidth x"
+  
 
 lemma normal_rep_of_Float_bitlen:
 (*Problem: Why doesn't special_transform follow from the other assumptions?\<dots>*)
-  assumes special_transform: "0 \<le> \<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - bitlen (mantissa f)) - 2 ^ fracwidth x"
+  assumes special_transform: "0 \<le> \<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - bitlen \<bar>mantissa f\<bar>) - 2 ^ fracwidth x"
 (*...It is possible to conclude yet_... from this (after fixing the type), but not the other way around as it should be? *)
   assumes "\<not>is_float_zero f"
   assumes "-int (bias x) < exponent f"
