@@ -8,6 +8,7 @@ begin
 
 value "valof float_format (1, bias float_format, 124)"
 value "valof float_format (0, 0, 0)"
+value [code] "int (bias float_format)"
 
 section \<open>IEEE.float to Float.float\<close>
 
@@ -359,14 +360,111 @@ lemma even_better: "\<bar>i\<bar> / 2 ^ nat (bitlen \<bar>i\<bar>) < 1"
 by (metis (no_types, hide_lams) abs_if divide_less_eq_1_neg divide_less_eq_1_pos not_numeral_less_one one_less_numeral_iff real_of_int_less_numeral_power_cancel_iff replace_from_special_transform semiring_norm(76) zero_less_numeral zero_less_power_abs_iff)
 
 value "(5::int) - (6::nat)"
-value "2 ^ -bitlen \<bar>4\<bar>"
+value "2 ^ nat (-bitlen \<bar>4\<bar>)"
 value "mantissa (Float (-1) (-1))"
 lemma "fst x \<noteq> 0 \<Longrightarrow> snd x \<noteq> 0 \<Longrightarrow> fracwidth x \<ge> bitlen \<bar>mantissa f\<bar>\<Longrightarrow> 0 \<le> \<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar>)) - 2 ^ fracwidth x"
-  
+oops
+
+lemma bitlen_pos_iff: "bitlen x > 0 \<longleftrightarrow> x > 0"
+  by (auto simp: bitlen_def)
+
+definition "normal_rep_of_Float'' x f = normal_rep_of_Float_b x (nat (bitlen \<bar>mantissa f\<bar> - 1)) f"
+
+lemma normal_rep_of_Float_bitlen:
+  assumes "\<not>is_float_zero f"
+  assumes mantissa: "bitlen \<bar>mantissa f\<bar> \<le> fracwidth x"
+  assumes exponent: "-int (bias x) < exponent f" "exponent f < 2^(expwidth x) - int (bias x) - fracwidth x"
+  shows "valof x (normal_rep_of_Float'' x f) = real_of_float f" (is ?th1)
+    and "is_valid x ((normal_rep_of_Float'' x f))" (is ?th2)
+    and "is_normal x ((normal_rep_of_Float'' x f))" (is ?th2)
+  sorry
+
+text \<open>TODO: subnormal_rep_of_Float\<close>
+text \<open>TODO: rep_of_Float\<close>
+
+lemma normal_rep_of_Float_bitlen:
+  assumes "\<not>is_float_zero f"
+  assumes mantissa: "bitlen \<bar>mantissa f\<bar> \<le> fracwidth x"
+  assumes exponent: "-int (bias x) < exponent f" "exponent f < 2^(expwidth x) - int (bias x) - fracwidth x"
+  defines "r \<equiv> normal_rep_of_Float_b x (nat (bitlen \<bar>mantissa f\<bar> - 1)) f"
+  shows "valof x r = real_of_float f" (is ?th1)
+    and "is_valid x r" (is ?th2)
+proof -
+  have bl_pos: "bitlen \<bar>mantissa f\<bar> > 0"
+    using assms(1)
+    apply (simp add:Float.mantissa_eq_zero_iff is_float_zero.rep_eq bitlen_pos_iff)
+    using zero_float.rep_eq
+    by blast
+  have "\<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) - 2 ^ fracwidth x \<ge>
+    2 ^ (nat (bitlen \<bar>mantissa f\<bar> - 1)) * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) - 2 ^ fracwidth x"
+    apply (rule diff_right_mono)
+    apply (rule mult_right_mono)
+    using bitlen_bounds[of "abs (mantissa f)"] bl_pos
+    apply (auto simp: bitlen_def)
+    done
+  also have "2 ^ (nat (bitlen \<bar>mantissa f\<bar> - 1)) * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) - 2 ^ fracwidth x
+    = (2::int) ^ (nat (bitlen \<bar>mantissa f\<bar> - 1) + (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1))) - 2 ^ fracwidth x"
+   unfolding power_add[symmetric]
+   by auto
+  also have "(nat (bitlen \<bar>mantissa f\<bar> - 1) + (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1))) = fracwidth x"
+    using assms by simp
+  finally have special_transform: "0 \<le> \<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) - 2 ^ fracwidth x"
+    by simp
+
+  have "\<bar>mantissa f\<bar> * (2::real) ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) <
+      2 ^ nat (bitlen \<bar>mantissa f\<bar>) * (2::real) ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1))"
+    apply (rule mult_strict_right_mono)    
+    apply auto
+    by (smt abs_real_le_2_powr_bitlen bitlen_nonneg powr_int)
+  also have "\<dots> = 2 ^ (nat (bitlen \<bar>mantissa f\<bar>) + fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1))"
+    unfolding power_add[symmetric]
+    using mantissa
+    by simp
+  also
+  have "bitlen \<bar>mantissa f\<bar> > 0" by fact
+  then have "nat (bitlen \<bar>mantissa f\<bar>) + fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1) = fracwidth x + 1"
+    using assms
+    by (simp)
+  finally
+  have "\<bar>mantissa f\<bar> * (2::real) ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) < 2 ^ (fracwidth x + 1)"
+    by simp
+  then have "real_of_int (\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1))) <
+    real_of_int (2 ^ (fracwidth x + 1) - 1) + 1"
+    by simp
+  then have "\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) < 2 ^ (fracwidth x + 1)"
+    unfolding int_le_real_less[symmetric]
+    by simp
+  then have "\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) < 2 ^ (fracwidth x + 1)"
+    by simp
+  then have "\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) - 2 ^ fracwidth x < 2 ^ fracwidth x"
+    by (simp)
+  with special_transform have l: "nat (\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) - 2 ^ fracwidth x) < 2 ^ fracwidth x"
+    by (simp add: nat_less_iff)
+
+
+  show ?th1
+    unfolding r_def
+    apply (rule normal_rep_of_Float_b_correct)
+      apply fact
+      using assms apply force
+      apply (simp add: divide_simps)
+    using special_transform apply linarith
+    using mantissa apply force
+    done
+  show ?th2
+    unfolding r_def
+    apply (auto simp: is_valid)
+    subgoal by (auto simp: normal_rep_of_Float_b_def)
+    subgoal using assms by (auto simp: normal_rep_of_Float_b_def nat_less_iff)
+    subgoal
+      apply (auto simp: normal_rep_of_Float_b_def nat_less_iff)
+      using l by auto
+    done
+qed
 
 lemma normal_rep_of_Float_bitlen:
 (*Problem: Why doesn't special_transform follow from the other assumptions?\<dots>*)
-  assumes special_transform: "0 \<le> \<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - bitlen \<bar>mantissa f\<bar>) - 2 ^ fracwidth x"
+  assumes special_transform: "0 \<le> \<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar>)) - 2 ^ fracwidth x"
 (*...It is possible to conclude yet_... from this (after fixing the type), but not the other way around as it should be? *)
   assumes "\<not>is_float_zero f"
   assumes "-int (bias x) < exponent f"
@@ -381,6 +479,7 @@ apply (rule normal_rep_of_Float_b_correct)
   apply (simp add: divide_simps)
 using even_better[of "mantissa f"]
   sledgehammer
+using special_transform apply linarith
   using replace_special_transform
 
   apply (simp add: assms(1) dual_order.strict_implies_order nat_le_iff)
