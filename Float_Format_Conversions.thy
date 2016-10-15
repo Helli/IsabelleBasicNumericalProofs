@@ -65,10 +65,10 @@ lemma Float_of_finite_correct: "real_of_float (Float_of_finite x r) = valof x r"
   done
 
 
+section \<open>Possibly counter-intuitive behaviour\<close>
+
 text \<open>To match the definition of @{const valof}, @{const Float_of_finite} does not check the triple for validity, this even applies to the lifted version from below. Hence, also special values like @{const Plus_infinity} can use this calculation.
 They are then interpreted wrongly, see below.\<close>
-
-section \<open>Possibly counter-intuitive behaviour\<close>
 
 --\<open>Val returns a real, even for special value input:\<close>
 schematic_goal sg1: "Rep_float Plus_infinity = (?s, ?e, ?f)"
@@ -254,7 +254,7 @@ proof -
     subgoal by (auto simp: normal_rep_of_Float_b_def)
     subgoal using assms by (auto simp: normal_rep_of_Float_b_def nat_less_iff)
     subgoal
-      apply (auto simp: normal_rep_of_Float_b_def nat_less_iff)
+      apply (auto simp: normal_rep_of_Float_b_def)
       using l by auto
     done
   show ?th3
@@ -264,19 +264,84 @@ proof -
     unfolding normal_rep_of_Float_b_def
       using exponent by auto
     subgoal
+      unfolding emax_def normal_rep_of_Float_b_def exponent.simps
+      apply (auto simp add: bl_pos)
+      apply (smt One_nat_def Suc_1 bl_pos diff_Suc_1 int_1 int_nat_eq less_diff_conv exponent mantissa nat_numeral_diff_1 of_nat_add of_nat_less_iff of_nat_numeral of_nat_power)
+    done
+  done
 qed
 
-thm normal_rep_of_Float_correct(2)
+term "valof"
+definition "test_format = (2, 3)"
+definition "test_float = Float 9 (-3)"
+value "valof test_format (normal_rep_of_Float test_format test_float :: nat * nat * nat)"
+definition "get_value r = (if (is_finite test_format r) then Some (valof test_format r) else None)"
+value "get_value (0, 0, 0)"
+(*
+subnormal values for format (2, 3):
+0, 1/8,... , 7/8
+normal values
+1, 9/8,... , 15/8,
+2, 9/4,... , 15/4
+*)
+(*check:*) value "largest test_format"
 
-lemma normal_rep_of_Float_bitlen:
-  assumes "\<not>is_float_zero f"
-  assumes mantissa: "bitlen \<bar>mantissa f\<bar> \<le> fracwidth x"
-  assumes exponent: "-int (bias x) < exponent f" "exponent f < 2^(expwidth x) - int (bias x) - fracwidth x"
-  defines "r \<equiv> normal_rep_of_Float_b x (nat (bitlen \<bar>mantissa f\<bar> - 1)) f"
-  shows "valof x r = real_of_float f" (is ?th1)
-    and "is_valid x r" (is ?th2)
+lemma general_valof_topfloat:
+  assumes ew_ok: "expwidth x \<ge> 2"
+  shows "valof x (topfloat x) = largest x"
+proof -
+  from ew_ok have "((2::nat) ^ expwidth x - 1 - 1) \<ge> 1"
+    by simp (metis Suc_1 Suc_leI linorder_neqE_nat nat.simps(1) not_le not_numeral_le_zero numerals(2) power.simps(1) power_inject_exp power_one_right zero_less_diff zero_less_power)
+  moreover have "real (2 ^ fracwidth x - Suc 0) = real (2 ^ fracwidth x) - 1"
+    by (simp add: of_nat_diff)
+  ultimately show ?thesis
+    unfolding emax_def topfloat_def largest_def
+    apply auto
+    using diff_divide_distrib
+    proof -
+      have f1: "\<forall>r ra rb. (r::real) / rb + ra / rb + - 1 * ((ra + r) / rb) = 0"
+        by (simp add: add_divide_distrib)
+      have "- (1::real) + 2 ^ fracwidth x + 1 = 2 ^ fracwidth x"
+        by auto
+      then have f2: "(1::real) / 2 ^ fracwidth x + (- 1 + 2 ^ fracwidth x) / 2 ^ fracwidth x + - 1 * (2 ^ fracwidth x / 2 ^ fracwidth x) = 0"
+        using f1 by metis
+      have f3: "((2 ^ fracwidth x - (1::real)) / 2 ^ fracwidth x \<noteq> 1 - 1 / 2 ^ fracwidth x) = ((1::real) / 2 ^ fracwidth x + (- 1 + 2 ^ fracwidth x) / 2 ^ fracwidth x \<noteq> 1)"
+        by fastforce
+      have "(1::real) / 2 ^ fracwidth x + (- 1 + 2 ^ fracwidth x) / 2 ^ fracwidth x = 1"
+        using f2 by simp
+      then show "(2 ^ fracwidth x - (1::real)) / 2 ^ fracwidth x = 1 - 1 / 2 ^ fracwidth x"
+        using f3 by meson
+    qed
+qed
 
+definition Float_largest :: "format \<Rightarrow> Float.float" where
+  "Float_largest x = Float
+    (2 ^ (fracwidth x + 1) - 1)
+    (int (emax x) - 1 - bias x - fracwidth x)"
 
+lemma "Float_largest x = largest x"
+  unfolding Float_largest_def largest_def
+  apply simp
+  oops
+
+lemma
+  assumes "fw > 3" "ex > 3"
+  shows "is_normal (fw, ew) (normal_rep_of_Float (fw, ew) (Float_largest (fw, ew)))"
+  oops
+
+definition subnormal_rep_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation"
+where
+  "subnormal_rep_of_Float x f =
+  (if is_float_nonneg f then 0 else 1, (*Zero-Float produces plus_zero*)
+    0,
+    nat (\<bar>Float.mantissa f\<bar> * 2 ^ nat (exponent f - bias x + fracwidth x )))"
+
+value "bias test_format"
+value "valof test_format (0, 0, 4)"
+value "valof test_format (subnormal_rep_of_Float test_format (Float 2 (-3)) :: nat * nat * nat)"
+
+lemma subn_or_0_rep_of_Float_correct:
+  assumes "exponent "
 
 text \<open>TODO: subnormal_rep_of_Float\<close>
 text \<open>TODO: rep_of_Float\<close>
@@ -326,6 +391,7 @@ value "mantissa 0"
 (*ToDo:
   lemmas about transforming twice?
   (make sure we get the same value back for normal IEEE.floats?)
+  (only "\<doteq>" possible due to difference +/-0)
 *)
 
 (*ToDo: Does this terminate?
