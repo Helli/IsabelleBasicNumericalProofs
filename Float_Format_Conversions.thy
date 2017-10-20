@@ -1,14 +1,13 @@
+(* Author: Fabian Hellauer
+           Fabian Immler
+*)
 theory Float_Format_Conversions
-imports
-  "$AFP/IEEE_Floating_Point/FloatProperty"
-  "$AFP/IEEE_Floating_Point/Code_Float"
-  "$AFP/IEEE_Floating_Point/RoundError"
-  "~~/src/HOL/Library/Float"
+  imports
+    "IEEE_Floating_Point.IEEE_Properties"
+    "IEEE_Floating_Point.Code_Float"
+    "IEEE_Floating_Point.IEEE"
+    "~~/src/HOL/Library/Float"
 begin
-
-value "valof float_format (1, bias float_format, 124)"
-value "valof float_format (0, 0, 0)"
-value [code] "int (bias float_format)"
 
 section \<open>IEEE.float to Float.float\<close>
 
@@ -17,40 +16,29 @@ fun Float_of_normal :: "format \<Rightarrow> representation \<Rightarrow> Float.
     Float ((-1)^s * (2 ^ fracwidth x + f)) (int e - bias x - fracwidth x)"
 
 lemma Float_of_normal_correct:
-  assumes "e > 0" --\<open>only normal numbers\<close>
+  assumes "e > 0"
   shows "real_of_float (Float_of_normal x (s,e,f)) = valof x (s,e,f)"
-using assms
-  apply (simp add: powr_realpow powr_divide2[symmetric])
-  apply (simp add: field_simps)
-  done
+  using assms
+  by (simp add: powr_realpow powr_diff) (simp add: field_simps)
 
 corollary Float_of_normal_rep:
   "is_normal x r \<Longrightarrow> real_of_float (Float_of_normal x r) = valof x r"
-unfolding is_normal_def
-  apply (cases r)
-  apply (simp del: Float_of_normal.simps add: Float_of_normal_correct)
-  done
+  unfolding is_normal_def
+  by (cases r) (simp del: Float_of_normal.simps add: Float_of_normal_correct)
 
 fun Float_of_subn_or_0 :: "format \<Rightarrow> representation \<Rightarrow> Float.float" where
   "Float_of_subn_or_0 x (s,_,f) =
     Float ((-1)^s * f) ((1 :: int) - bias x - fracwidth x)"
 
 lemma Float_of_subn_or_0_correct:
-  --\<open>only subnormal numbers or 0 (e = 0)\<close>
   shows "real_of_float (Float_of_subn_or_0 x (s,0,f)) = valof x (s,0,f)"
-  apply (simp add: powr_realpow powr_divide2[symmetric])
-  done
+  by (simp add: powr_realpow powr_diff)
 
 corollary Float_of_subn_or_0_rep:
   "is_denormal x r \<or> is_zero x r \<Longrightarrow> real_of_float (Float_of_subn_or_0 x r) = valof x r"
-using assms
-unfolding is_denormal_def is_zero_def
-  apply (cases r)
-  apply (auto simp del: Float_of_subn_or_0.simps simp add: Float_of_subn_or_0_correct)
-  done
+  unfolding is_denormal_def is_zero_def
+  by (cases r) (auto simp del: Float_of_subn_or_0.simps simp add: Float_of_subn_or_0_correct)
 
-thm field_simps
-thm divide_simps
 
 subsection \<open>Combining the finite cases\<close>
 
@@ -58,55 +46,31 @@ fun Float_of_finite :: "format \<Rightarrow> representation \<Rightarrow> Float.
   "Float_of_finite x (s,0,f) = Float_of_subn_or_0 x (s,0,f)" |
   "Float_of_finite x (s,e,f) = Float_of_normal x (s,e,f)"
 
-lemma Float_of_finite_correct: "real_of_float (Float_of_finite x r) = valof x r"
-  apply (cases r)
+theorem Float_of_finite_correct: "real_of_float (Float_of_finite x r) = valof x r"
   using Float_of_finite.simps Float_of_normal_correct Float_of_subn_or_0_correct
-  apply (metis Suc_pred neq0_conv)
-  done
-
-
-section \<open>Possibly counter-intuitive behaviour\<close>
-
-text \<open>To match the definition of @{const valof}, @{const Float_of_finite} does not check the triple for validity, this even applies to the lifted version from below. Hence, also special values like @{const Plus_infinity} can use this calculation.
-They are then interpreted wrongly, see below.\<close>
-
---\<open>Val returns a real, even for special value input:\<close>
-schematic_goal sg1: "Rep_float Plus_infinity = (?s, ?e, ?f)"
-  unfolding Plus_infinity_def
-  using is_valid_special Abs_float_inverse
-  apply simp
-  unfolding plus_infinity_def emax_def "expwidth.simps" float_format_def
-  apply simp
-  done
-schematic_goal sg2: "Val Plus_infinity = ?x"
-  unfolding Val_def sg1 float_format_def
-  apply simp
-  done
-
+  by (cases r) (metis Suc_pred neq0_conv)
 
 section \<open>Float.float to IEEE.float\<close>
 
 definition normal_rep_of_Float_b :: "format \<Rightarrow> nat \<Rightarrow> Float.float \<Rightarrow> representation"
-where
-  "normal_rep_of_Float_b x b f =
+  where
+    "normal_rep_of_Float_b x b f =
   (if is_float_pos f then 0 else 1,
     nat (Float.exponent f + int (bias x) + b),
     nat (\<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x))"
-(*Todo: 2^fracwidth ausklammern? \<longrightarrow> Dann aber drinnen kein int mehr?*)
-thm normal_rep_of_Float_b_def[simplified]
 
 lemma normal_rep_of_Float_b_correct:
   fixes b :: nat
   assumes f_not_zero: "\<not>is_float_zero f"
   assumes exponent_b: "0 < Float.exponent f + int (bias x) + b"
-  and mantissa_b: "0 \<le> \<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x"
-  and b_ok: "fracwidth x \<ge> b"
+    and mantissa_b: "0 \<le> \<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x"
+    and b_ok: "fracwidth x \<ge> b"
   shows "valof x (normal_rep_of_Float_b x b f) = real_of_float f"
-using assms
+  using assms
 proof  (cases "is_float_pos f")
-case True
+  case True
   have if_false: "\<not>nat (Float.exponent f + int (bias x) + b) = 0"
-        using exponent_b by linarith
+    using exponent_b by linarith
   have a: "?thesis \<longleftrightarrow>
     2 ^ nat (Float.exponent f + int (bias x) + int b) *
     (1 + real (nat (\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x)) / 2 ^ fracwidth x) /
@@ -115,7 +79,7 @@ case True
     real_of_int (mantissa f) *
     2 powr real_of_int (Float.exponent f)"
     using if_false normal_rep_of_Float_b_def mantissa_exponent valof.simps powr_realpow
-      by (simp add: True)
+    by (simp add: True)
   have m_greater: "mantissa f > 0"
     by (metis Float.compute_is_float_pos Float_mantissa_exponent True)
   then have "\<bar>mantissa f\<bar> = mantissa f"
@@ -130,18 +94,15 @@ case True
     by simp
   have s5: "real (nat (Float.exponent f + int (bias x) + int b)) + real (fracwidth x - b)
     = real_of_int (Float.exponent f + int (bias x) + int (fracwidth x))"
-     using if_false b_ok by linarith
+    using if_false b_ok by linarith
   show ?thesis
     unfolding a
-  apply (simp add: s2)
-  apply (simp add: s3)
-  apply (simp add: divide_simps powr_realpow[symmetric] powr_add[symmetric])
-  unfolding s4 s5
-    by simp
+    by (simp add: s2 s3 divide_simps powr_realpow[symmetric] powr_add[symmetric])
+        (simp add: s4 s5)
 next
-case False
+  case False
   have if_false: "nat (Float.exponent f + int (bias x) + int b) \<noteq> 0"
-        using exponent_b by linarith
+    using exponent_b by linarith
   have a: "?thesis \<longleftrightarrow>
     - (2 ^ nat (Float.exponent f + int (bias x) + int b) *
     (1 + real (nat (\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x)) / 2 ^ fracwidth x) /
@@ -150,9 +111,10 @@ case False
     real_of_int (mantissa f) *
     2 powr real_of_int (Float.exponent f)"
     using if_false normal_rep_of_Float_b_def mantissa_exponent valof.simps powr_realpow
-      by (simp add: False)
+    by (simp add: False)
   have m_smaller: "mantissa f < 0"
-    by (smt False Float.compute_is_float_pos Float.compute_is_float_zero Float_mantissa_exponent f_not_zero)
+    by (metis False Float.compute_is_float_pos Float.compute_is_float_zero Float_mantissa_exponent
+        f_not_zero linorder_neqE_linordered_idom)
   then have "\<bar>mantissa f\<bar> = - mantissa f"
     by simp
   then have s2: "real (nat (\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - b) - 2 ^ fracwidth x))
@@ -165,18 +127,18 @@ case False
     by simp
   have s5: "real (nat (Float.exponent f + int (bias x) + int b)) + real (fracwidth x - b)
     = real_of_int (Float.exponent f + int (bias x) + int (fracwidth x))"
-     using if_false b_ok by linarith
+    using if_false b_ok by linarith
   show ?thesis
     unfolding a
-  apply (simp add: s2)
-  apply (simp add: s3)
-  apply (simp add: divide_simps powr_realpow[symmetric] powr_add[symmetric])
-  unfolding s4 s5
-    by simp
+    by (simp add: s2 s3 divide_simps powr_realpow[symmetric] powr_add[symmetric])
+      (simp add: s4 s5)
 qed
 
+lemma floorlog_pos_iff: "floorlog b x > 0 \<longleftrightarrow> x > 0 \<and> b > 1"
+  by (auto simp: floorlog_def)
+
 lemma bitlen_pos_iff: "bitlen x > 0 \<longleftrightarrow> x > 0"
-  by (auto simp: bitlen_def)
+  by (auto simp: bitlen_def floorlog_pos_iff)
 
 definition normal_rep_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation" where
   "normal_rep_of_Float x f = normal_rep_of_Float_b x (nat (bitlen \<bar>mantissa f\<bar> - 1)) f"
@@ -184,283 +146,214 @@ definition normal_rep_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow
 lemma normal_rep_of_Float_correct:
   assumes "\<not>is_float_zero f"
   assumes mantissa: "bitlen \<bar>mantissa f\<bar> \<le> fracwidth x"
-  assumes exponent: "-int (bias x) < exponent f" "exponent f < 2^(expwidth x) - int (bias x) - fracwidth x"
+  assumes exponent: "- int (bias x) - bitlen \<bar>mantissa f\<bar> + 1 < Float.exponent f"
+    "exponent f < 2^(expwidth x) - int (bias x) - fracwidth x"
   shows "valof x (normal_rep_of_Float x f) = real_of_float f" (is ?th1)
     and "is_valid x (normal_rep_of_Float x f)" (is ?th2)
     and "is_normal x (normal_rep_of_Float x f)" (is ?th3)
 proof -
-  have bl_pos: "bitlen \<bar>mantissa f\<bar> > 0"
-    using assms(1)
-    apply (simp add:Float.mantissa_eq_zero_iff is_float_zero.rep_eq bitlen_pos_iff)
-    using zero_float.rep_eq
-    by blast
-  have "\<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) - 2 ^ fracwidth x \<ge>
-    2 ^ (nat (bitlen \<bar>mantissa f\<bar> - 1)) * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) - 2 ^ fracwidth x"
-    apply (rule diff_right_mono)
-    apply (rule mult_right_mono)
+  from assms(1) have mnz[simp]: "mantissa f \<noteq> 0"
+    by (auto simp: is_float_zero_def mantissa_exponent)
+  let ?bl = "bitlen \<bar>mantissa f\<bar>"
+  have bl_pos: "?bl > 0"
+    by (auto simp: bitlen_pos_iff)
+  have "\<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - nat (?bl - 1)) - 2 ^ fracwidth x \<ge>
+    2 ^ (nat (?bl - 1)) * 2 ^ (fracwidth x - nat (?bl - 1)) - 2 ^ fracwidth x"
     using bitlen_bounds[of "\<bar>mantissa f\<bar>"] bl_pos
-    apply (auto simp: bitlen_def)
-    done
-  also have "2 ^ (nat (bitlen \<bar>mantissa f\<bar> - 1)) * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) - 2 ^ fracwidth x
-    = (2::int) ^ (nat (bitlen \<bar>mantissa f\<bar> - 1) + (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1))) - 2 ^ fracwidth x"
-   unfolding power_add[symmetric]
-   by auto
-  also have "(nat (bitlen \<bar>mantissa f\<bar> - 1) + (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1))) = fracwidth x"
+    by (auto simp: bitlen_def floorlog_def)
+  also have "2 ^ (nat (?bl - 1)) * 2 ^ (fracwidth x - nat (?bl - 1)) - 2 ^ fracwidth x
+    = (2::int) ^ (nat (?bl - 1) + (fracwidth x - nat (?bl - 1))) - 2 ^ fracwidth x"
+    unfolding power_add[symmetric]
+    by auto
+  also have "(nat (?bl - 1) + (fracwidth x - nat (?bl - 1))) = fracwidth x"
     using assms by simp
-  finally have mantissa_ok: "0 \<le> \<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) - 2 ^ fracwidth x"
+  finally have mantissa_ok: "0 \<le> \<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (?bl - 1)) - 2 ^ fracwidth x"
     by simp
-  have "\<bar>mantissa f\<bar> * (2::real) ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) <
-      2 ^ nat (bitlen \<bar>mantissa f\<bar>) * (2::real) ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1))"
-    apply (rule mult_strict_right_mono)
+  have "\<bar>mantissa f\<bar> * (2::real) ^ (fracwidth x - nat (?bl - 1)) <
+      2 ^ nat (?bl) * (2::real) ^ (fracwidth x - nat (?bl - 1))"
     using abs_real_le_2_powr_bitlen bitlen_nonneg powr_int
     by auto
-  also have "\<dots> = 2 ^ (nat (bitlen \<bar>mantissa f\<bar>) + fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1))"
+  also have "\<dots> = 2 ^ (nat (?bl) + fracwidth x - nat (?bl - 1))"
     unfolding power_add[symmetric]
     using mantissa
     by simp
   also
-  have "bitlen \<bar>mantissa f\<bar> > 0" by fact
-  then have "nat (bitlen \<bar>mantissa f\<bar>) + fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1) = fracwidth x + 1"
+  have "?bl > 0" by fact
+  then have "nat (?bl) + fracwidth x - nat (?bl - 1) = fracwidth x + 1"
     using assms
     by (simp)
   finally
-  have "\<bar>mantissa f\<bar> * (2::real) ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) < 2 ^ (fracwidth x + 1)"
+  have "\<bar>mantissa f\<bar> * (2::real) ^ (fracwidth x - nat (?bl - 1)) < 2 ^ (fracwidth x + 1)"
     by simp
-  then have "real_of_int (\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1))) <
+  then have "real_of_int (\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (?bl - 1))) <
     real_of_int (2 ^ (fracwidth x + 1) - 1) + 1"
     by simp
-  then have "\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) < 2 ^ (fracwidth x + 1)"
+  then have "\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (?bl - 1)) < 2 ^ (fracwidth x + 1)"
     unfolding int_le_real_less[symmetric]
     by simp
-  then have "\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) < 2 ^ (fracwidth x + 1)"
+  then have "\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (?bl - 1)) < 2 ^ (fracwidth x + 1)"
     by simp
-  then have "\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) - 2 ^ fracwidth x < 2 ^ fracwidth x"
+  then have "\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (?bl - 1)) - 2 ^ fracwidth x < 2 ^ fracwidth x"
     by (simp)
-  with mantissa_ok have l: "nat (\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar> - 1)) - 2 ^ fracwidth x) < 2 ^ fracwidth x"
+  with mantissa_ok
+  have l: "nat (\<bar>mantissa f\<bar> * 2 ^ (fracwidth x - nat (?bl - 1)) - 2 ^ fracwidth x) < 2 ^ fracwidth x"
     by (simp add: nat_less_iff)
 
+  have emax: "nat (Float.exponent f + int (bias x) + (bitlen \<bar>mantissa f\<bar> - 1)) < emax x"
+    using exponent mantissa
+    by (auto simp: emax_def nat_less_iff of_nat_diff)
   show ?th1
     unfolding normal_rep_of_Float_def
-    apply (rule normal_rep_of_Float_b_correct)
-      apply fact
-      using assms apply force
-      apply (simp add: divide_simps)
-    using mantissa_ok apply linarith
-    using mantissa apply force
-    done
+    using assms mantissa_ok mantissa
+    by (intro normal_rep_of_Float_b_correct) auto
   show ?th2
     unfolding normal_rep_of_Float_def
-    apply (auto simp: is_valid)
-    subgoal by (auto simp: normal_rep_of_Float_b_def)
-    subgoal using assms by (auto simp: normal_rep_of_Float_b_def nat_less_iff)
-    subgoal
-      apply (auto simp: normal_rep_of_Float_b_def)
-      using l by auto
-    done
+    using assms l
+    by (auto simp: normal_rep_of_Float_b_def nat_less_iff is_valid)
   show ?th3
-    unfolding normal_rep_of_Float_def
-    apply (auto simp: is_normal_def)
-    subgoal
-    unfolding normal_rep_of_Float_b_def
-      using exponent by auto
-    subgoal
-      unfolding emax_def normal_rep_of_Float_b_def exponent.simps
-      apply (auto simp add: bl_pos)
-      apply (smt One_nat_def Suc_1 bl_pos diff_Suc_1 int_1 int_nat_eq less_diff_conv exponent mantissa nat_numeral_diff_1 of_nat_add of_nat_less_iff of_nat_numeral of_nat_power)
-    done
-  done
+    using bl_pos exponent emax
+    by (auto simp: normal_rep_of_Float_def normal_rep_of_Float_b_def is_normal_def bl_pos emax_def)
 qed
-
-term "valof"
-definition "test_format = (2, 3)"
-definition "test_float = Float 9 (-3)"
-value "valof test_format (normal_rep_of_Float test_format test_float :: nat * nat * nat)"
-definition "get_value r = (if (is_finite test_format r) then Some (valof test_format r) else None)"
-value "get_value (0, 0, 0)"
-(*
-subnormal values for format (2, 3):
-0, 1/8,... , 7/8
-normal values
-1, 9/8,... , 15/8,
-2, 9/4,... , 15/4
-*)
-(*check:*) value "largest test_format"
 
 lemma general_valof_topfloat:
   assumes ew_ok: "expwidth x \<ge> 2"
   shows "valof x (topfloat x) = largest x"
 proof -
+  let ?fw = "2 ^ fracwidth x"
   from ew_ok have "((2::nat) ^ expwidth x - 1 - 1) \<ge> 1"
-    by simp (metis Suc_1 Suc_leI linorder_neqE_nat nat.simps(1) not_le not_numeral_le_zero numerals(2) power.simps(1) power_inject_exp power_one_right zero_less_diff zero_less_power)
-  moreover have "real (2 ^ fracwidth x - Suc 0) = real (2 ^ fracwidth x) - 1"
+    by simp (metis Suc_1 Suc_leI linorder_neqE_nat nat.simps(1) not_le not_numeral_le_zero
+        numerals(2) power.simps(1) power_inject_exp power_one_right zero_less_diff zero_less_power)
+  moreover have "real (?fw - Suc 0) = real (?fw) - 1"
     by (simp add: of_nat_diff)
+  moreover have "(?fw - (1::real)) / ?fw = 1 - 1 / ?fw"
+  proof -
+    have f1: "\<forall>r ra rb. (r::real) / rb + ra / rb + - 1 * ((ra + r) / rb) = 0"
+      by (simp add: add_divide_distrib)
+    have "- (1::real) + ?fw + 1 = ?fw"
+      by auto
+    then have f2: "(1::real) / ?fw + (- 1 + ?fw) / ?fw + - 1 * (?fw / ?fw) = 0"
+      using f1 by metis
+    have f3: "((?fw - (1::real)) / ?fw \<noteq> 1 - 1 / ?fw) = ((1::real) / ?fw + (- 1 + ?fw) / ?fw \<noteq> 1)"
+      by fastforce
+    have "(1::real) / ?fw + (- 1 + ?fw) / ?fw = 1"
+      using f2 by simp
+    then show "(?fw - (1::real)) / ?fw = 1 - 1 / ?fw"
+      using f3 by meson
+  qed
   ultimately show ?thesis
     unfolding emax_def topfloat_def largest_def
-    apply auto
-    using diff_divide_distrib
-    proof -
-      have f1: "\<forall>r ra rb. (r::real) / rb + ra / rb + - 1 * ((ra + r) / rb) = 0"
-        by (simp add: add_divide_distrib)
-      have "- (1::real) + 2 ^ fracwidth x + 1 = 2 ^ fracwidth x"
-        by auto
-      then have f2: "(1::real) / 2 ^ fracwidth x + (- 1 + 2 ^ fracwidth x) / 2 ^ fracwidth x + - 1 * (2 ^ fracwidth x / 2 ^ fracwidth x) = 0"
-        using f1 by metis
-      have f3: "((2 ^ fracwidth x - (1::real)) / 2 ^ fracwidth x \<noteq> 1 - 1 / 2 ^ fracwidth x) = ((1::real) / 2 ^ fracwidth x + (- 1 + 2 ^ fracwidth x) / 2 ^ fracwidth x \<noteq> 1)"
-        by fastforce
-      have "(1::real) / 2 ^ fracwidth x + (- 1 + 2 ^ fracwidth x) / 2 ^ fracwidth x = 1"
-        using f2 by simp
-      then show "(2 ^ fracwidth x - (1::real)) / 2 ^ fracwidth x = 1 - 1 / 2 ^ fracwidth x"
-        using f3 by meson
-    qed
+    by auto
 qed
-
-definition Float_largest :: "format \<Rightarrow> Float.float" where
-  "Float_largest x = Float
-    (2 ^ (fracwidth x + 1) - 1)
-    (int (emax x) - 1 - bias x - fracwidth x)"
-
-lemma "Float_largest x = largest x"
-  unfolding Float_largest_def largest_def
-  apply simp
-  oops
-
-lemma
-  assumes "fw > 3" "ex > 3"
-  shows "is_normal (fw, ew) (normal_rep_of_Float (fw, ew) (Float_largest (fw, ew)))"
-  oops
 
 definition subnormal_rep_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation"
-where
-  "subnormal_rep_of_Float x f =
-  (if is_float_nonneg f then 0 else 1, (*Zero-Float produces plus_zero*)
+  where
+    "subnormal_rep_of_Float x f =
+  (if is_float_nonneg f then 0 else 1,
     0,
-    nat (\<bar>Float.mantissa f\<bar> * 2 ^ nat (exponent f - bias x + fracwidth x )))"
+    nat (\<bar>Float.mantissa f\<bar> * 2 ^ nat (exponent f + bias x + fracwidth x - 1)))"
 
-value "bias test_format"
-value "valof test_format (0, 0, 4)"
-value "valof test_format (subnormal_rep_of_Float test_format (Float 2 (-3)) :: nat * nat * nat)"
+lemma floorlog_leD: "floorlog b x \<le> w \<Longrightarrow> b > 1 \<Longrightarrow> x < b ^ w"
+  by (metis One_nat_def floorlog_bounds less_Suc0 less_le_trans neq0_conv power_0 power_increasing_iff zero_le)
 
-lemma subn_or_0_rep_of_Float_correct:
-  assumes "exponent "
+lemma bitlen_leD: "nat x < 2 ^ w" if "bitlen x \<le> w"
+  using that
+  by (auto simp: bitlen_def dest!: floorlog_leD)
 
-text \<open>TODO: subnormal_rep_of_Float\<close>
-text \<open>TODO: rep_of_Float\<close>
-
-lemma normal_rep_of_Float_bitlen:
-(*Problem: Why doesn't special_transform follow from the other assumptions?\<dots>*)
-  assumes special_transform: "0 \<le> \<bar>Float.mantissa f\<bar> * 2 ^ (fracwidth x - nat (bitlen \<bar>mantissa f\<bar>)) - 2 ^ fracwidth x"
-(*...It is possible to conclude yet_... from this (after fixing the type), but not the other way around as it should be? *)
+lemma subnormal_rep_of_Float_correct:
   assumes "\<not>is_float_zero f"
-  assumes "-int (bias x) < exponent f"
-  and "Float.exponent f + int (bias x) + fracwidth x < 2^(expwidth x)"
-  defines "r \<equiv> normal_rep_of_Float_b x (nat (bitlen \<bar>mantissa f\<bar>)) f"
-  shows "valof x r = real_of_float f"
-  and "is_valid x r"
-unfolding r_def
-apply (rule normal_rep_of_Float_b_correct)
-  apply fact
-  using assms(3) apply auto[1]
-  apply (simp add: divide_simps)
-using special_transform apply linarith
-  using replace_special_transform
+  assumes mantissa: "bitlen \<bar>mantissa f\<bar> \<le> 1 - exponent f - bias x"
+  assumes exponent: "fracwidth x - int (bias x) < exponent f"
 
-  apply (simp add: assms(1) dual_order.strict_implies_order nat_le_iff)
+shows "valof x (subnormal_rep_of_Float x f) = real_of_float f" (is ?th1)
+  and "is_valid x (subnormal_rep_of_Float x f)" (is ?th2)
+  and "is_denormal x (subnormal_rep_of_Float x f)" (is ?th3)
+proof -
+  have mnz: "mantissa f \<noteq> 0" using assms(1) by (auto simp: is_float_zero_def mantissa_exponent)
+  then have "bitlen (\<bar>mantissa f\<bar> * 2 ^ nat (Float.exponent f + int (bias x) + int (fracwidth x) - 1)) =
+    bitlen \<bar>mantissa f\<bar> + Float.exponent f + int (bias x) + int (fracwidth x) - 1"
+    using exponent
+    by simp
+  also have "\<dots> \<le> fracwidth x"
+    using mantissa
+    by simp
+  finally have "bitlen (\<bar>mantissa f\<bar> * 2 ^ nat (Float.exponent f + int (bias x) + int (fracwidth x) - 1)) \<le> fracwidth x"
+    .
+  from bitlen_leD[OF this]
+  have 1: "nat (\<bar>mantissa f\<bar> * 2 ^ nat (Float.exponent f + int (bias x) + int (fracwidth x) - 1))
+    < 2 ^ fracwidth x"
+    by (auto simp: bitlen_def)
 
-definition float_rep_of_Float_b :: "format \<Rightarrow> Float.float \<Rightarrow> representation" where
-  "float_rep_of_Float_b x f = (
+  have 2: "\<bar>mantissa f\<bar> * 2 ^ nat (Float.exponent f + int (bias x) + int (fracwidth x) - 1) > 0"
+    using mnz
+    by (auto simp: intro!: mult_pos_pos)
+
+  have req: "real (nat (Float.exponent f + int (bias x) + int (fracwidth x) - 1)) =
+        real_of_int (Float.exponent f) + real (bias x) + real (fracwidth x) - 1"
+    using exponent by auto
+  have not_le: "2 powr real_of_int (Float.exponent f) \<le> 0 \<longleftrightarrow> False"
+    by (simp add: antisym_conv)
+  show ?th2
+    using 1
+    by (auto simp: subnormal_rep_of_Float_def is_valid_def)
+  show ?th3
+    using 2
+    by (auto simp: subnormal_rep_of_Float_def is_denormal_def)
+  show ?th1
+    by (auto simp: subnormal_rep_of_Float_def powr_realpow[symmetric] powr_add diff_add_eq req
+        powr_diff is_float_nonneg_def zero_le_mult_iff not_le
+        mantissa_exponent)
+qed
+
+definition float_rep_of_Float :: "format \<Rightarrow> Float.float \<Rightarrow> representation" where
+  "float_rep_of_Float x f = (
     if is_float_zero f
-      then (0,0,0)
-      else normal_rep_of_Float_b x (nat (bitlen \<bar>mantissa f\<bar>)) f
+    then (0,0,0)
+    else
+      let (m, e) = (mantissa f, exponent f)
+      in
+        if bitlen (abs m) + e \<le> 1 - int (bias x)
+        then subnormal_rep_of_Float x f
+        else normal_rep_of_Float x f
   )"
 
-lemma float_rep_of_Float_b_correct:
-  assumes nat_transform: "Float.exponent f + int (bias x) > 0"
-  shows "valof x (float_rep_of_Float_b x f) = real_of_float f"
-unfolding float_rep_of_Float_b_def
-  by (simp add: is_float_zero.rep_eq nat_transform normal_rep_of_Float_b_correct)
+lemma is_valid_0: "is_valid x (0, 0, 0)"
+  by (auto simp: is_valid_def)
 
-lemma float_rep_of_Float_superb:
-  (*s. Zettel N\<degree> 1337*)
-  fixes x f
-  defines "r \<equiv> float_rep_of_Float_b x f"
-  shows "valof x r = real_of_float f"
-  and "is_valid x r"
+lemma is_zero_0: "is_zero x (0, 0, 0)"
+  by (auto simp: is_finite_def is_denormal_def is_normal_def is_valid_0 is_zero_def)
 
-value "exponent 0"
-value "mantissa 0"
-(*ToDo:
-  lemmas about transforming twice?
-  (make sure we get the same value back for normal IEEE.floats?)
-  (only "\<doteq>" possible due to difference +/-0)
-*)
-
-(*ToDo: Does this terminate?
-value "normal_rep_of_Float float_format (Float 3 2)"
-*)
-
-section \<open>Lifting important results\<close>
-
-definition Float_of_Finite :: "IEEE.float \<Rightarrow> Float.float" where
-  "Float_of_Finite f = Float_of_finite float_format (Rep_float f)"
-
-lemma Float_of_Finite_correct: "real_of_float (Float_of_Finite f) = Val f"
-  unfolding Float_of_Finite_def Val_def
-  using Float_of_finite_correct[of float_format "Rep_float f"].
-
-(* Todo: expand *)
+theorem float_rep_of_Float:
+  "valof x (float_rep_of_Float x f) = real_of_float f"
+  "is_valid x (float_rep_of_Float x f)"
+  "is_finite x (float_rep_of_Float x f)"
+  if "bitlen \<bar>mantissa f\<bar> \<le> int (fracwidth x)"
+    "int (fracwidth x) - int (bias x) < Float.exponent f"
+    "Float.exponent f < 2 ^ expwidth x - int (bias x) - int (fracwidth x)"
+  using that
+  by (auto simp: float_rep_of_Float_def is_float_zero_def is_finite_def is_zero_0
+      intro!: subnormal_rep_of_Float_correct normal_rep_of_Float_correct is_valid_0)
 
 
-definition ferr :: "format \<Rightarrow> roundmode \<Rightarrow> real \<Rightarrow> real"
-where "ferr x m a = valof x (round x m a) - a"
+section \<open>Lifting to Type @{type float}\<close>
 
-term "truncate_down 53"
+definition "Float_of_IEEE x = Float_of_finite float_format (Rep_float x)"
 
-lemma
-  shows "is_valid x (float_rep_of_Float x f)"
-  (*and "is_finite x (float_rep_of_Float x f)"*)
-unfolding is_valid_def float_rep_of_Float_def normal_rep_of_Float_def
-  apply simp
-  oops (*\<bar>mantissa f\<bar> \<le> 1 ? Need another approach for the conversion*)
+theorem Float_of_IEEE: "real_of_float (Float_of_IEEE x) = Val x"
+  by (auto simp: Float_of_IEEE_def Float_of_finite_correct Val_def)
 
-term threshold
-lemma closest_eq:
-  assumes "blabla r"\<comment>\<open>normalisiert, klein genug, etc...\<close>
-  shows "closest (valof x) p (Collect (is_finite x)) r =
-    (
-      let
-        l = truncate_down (fracwidth x) r;
-        u = truncate_up (fracwidth x) r;
-        lf = float_of l;
-        uf = float_of u
-      in if abs (l - r) < abs (u - r) then
-          float_format_of_Float x lf
-        else if abs (l - r) > abs (u - r) then float_format_of_Float x uf
-        else undefined)"
-        sorry
+definition "IEEE_of_Float x = Abs_float (float_rep_of_Float float_format x)"
 
-lemma lemma1:
-  "abs (ferr x To_nearest (valof x a + valof x b)) \<le> abs (valof x a)"
-proof cases
-  assume "abs (valof x a) \<ge> abs (valof x b)"
-  term "closest (valof x) (\<lambda>a. even (fraction a)) (Collect (is_finite x)) (valof x a + valof x b)"
-  have "\<exists>aa. is_closest (valof x) (Collect (is_finite x))
-      (valof x a + valof x b) aa \<and>
-     ((\<exists>ba. is_closest (valof x) (Collect (is_finite x)) (valof x a + valof x b) ba \<and> even (fraction ba)) \<longrightarrow>
-      even (fraction aa))"
-    sorry
-  show ?thesis
-    unfolding ferr_def 
-    apply (simp )
-    apply auto
-    prefer 4
-    sorry
-next
-  fix P show P sorry
-qed
-  
+lemma Finite_Abs_float_iff:
+  "Finite (Abs_float x) \<longleftrightarrow> is_finite float_format x" if "is_valid float_format x"
+  using that
+  by (auto simp: Finite_def Isnormal_def Abs_float_inverse is_finite_def
+      Isdenormal_def Iszero_def)
 
-lemma corollary2:
-  "\<exists>c. ferr x m (valof x a + valof x b) = valof x c"
-  sorry
+theorem IEEE_of_Float: "Val (IEEE_of_Float x) = real_of_float x"
+  and IEEE_of_Float_Finite: "Finite (IEEE_of_Float x)"
+  if "bitlen (abs (mantissa x)) \<le> 52" "- 971 < exponent x" "exponent x < 973"
+  using that float_rep_of_Float[of x float_format]
+  by (auto simp: Val_def IEEE_of_Float_def float_format_def bias_def Abs_float_inverse
+      Finite_Abs_float_iff)
 
 end
