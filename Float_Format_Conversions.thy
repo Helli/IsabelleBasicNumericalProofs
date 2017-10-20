@@ -3,10 +3,8 @@
 *)
 theory Float_Format_Conversions
   imports
-    "IEEE_Floating_Point.IEEE_Properties"
-    "IEEE_Floating_Point.Code_Float"
-    "IEEE_Floating_Point.IEEE"
-    "~~/src/HOL/Library/Float"
+    IEEE_Floating_Point.IEEE_Properties
+    "HOL-Library.Float"
 begin
 
 section \<open>IEEE.float to Float.float\<close>
