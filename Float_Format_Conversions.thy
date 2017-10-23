@@ -3,8 +3,6 @@
 *)
 theory Float_Format_Conversions
   imports
-    "IEEE_Floating_Point.IEEE_Properties"
-    "IEEE_Floating_Point.Code_Float"
     "IEEE_Floating_Point.IEEE"
     "HOL-Library.Float"
 begin
@@ -209,7 +207,7 @@ proof -
   show ?th2
     unfolding normal_rep_of_Float_def
     using assms l
-    by (auto simp: normal_rep_of_Float_b_def nat_less_iff is_valid)
+    by (auto simp: normal_rep_of_Float_b_def nat_less_iff is_valid_def)
   show ?th3
     using bl_pos exponent emax
     by (auto simp: normal_rep_of_Float_def normal_rep_of_Float_b_def is_normal_def bl_pos emax_def)
